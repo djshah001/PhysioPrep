@@ -23,6 +23,13 @@ import { ScrollView } from 'react-native-gesture-handler';
 import ActionSheet, { ActionSheetRef } from 'react-native-actions-sheet';
 import RenderHTML from 'react-native-render-html';
 import { customHTMLElementModels, tagsStyles, renderers } from 'lib/HtmlRenderers';
+import {
+  handleJumpTo,
+  handleNext,
+  handlePrev,
+  handleSelect,
+  handleSubmit,
+} from 'lib/QuizHandelers';
 export default function TopicQuizPage() {
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const router = useRouter();
@@ -34,12 +41,13 @@ export default function TopicQuizPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [result, setResult] = useState<{ score: number; totalQuestions: number } | null>(null);
-  const [elapsed, setElapsed] = useState(0);
+  const elapsed = useRef(0);
   const startTimeRef = useRef<number | null>(null);
   const [showJumpModal, setShowJumpModal] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
   const navigation = useNavigation();
-  const actionSheetRef = useRef<ActionSheetRef>(null);
+  const explainRef = useRef<ActionSheetRef>(null);
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     navigation.setOptions({
@@ -62,7 +70,7 @@ export default function TopicQuizPage() {
         setQuiz(res.data.data);
         setAnswers([]);
         setCurrentIndex(0);
-        setElapsed(0);
+        elapsed.current = 0;
         startTimeRef.current = Date.now();
       } catch (err) {
         handleError(err);
@@ -76,55 +84,6 @@ export default function TopicQuizPage() {
 
   // Timer logic removed from parent to avoid per-second re-renders.
   // Elapsed time for submission will be calculated from startTimeRef.
-
-  // Handlers
-  const handleSelect = (optionIdx: number) => {
-    // Prevent changing answer once selected for this question
-    if (answers[currentIndex] != null) {
-      actionSheetRef.current?.show();
-      return;
-    }
-    const newAnswers = [...answers];
-    newAnswers[currentIndex] = optionIdx;
-    setAnswers(newAnswers);
-    // Auto-open explanation after first selection
-    actionSheetRef.current?.show();
-  };
-
-  const handleNext = () => {
-    if (currentIndex < (quiz?.questions.length || 0) - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!quiz) return;
-    setSubmitting(true);
-    try {
-      const timeSpent = startTimeRef.current
-        ? Math.floor((Date.now() - startTimeRef.current) / 1000)
-        : elapsed;
-      const res = await quizApi.submitQuiz(quiz.sessionId, { answers, timeSpent });
-      setResult({ score: res.data.data.score, totalQuestions: res.data.data.totalQuestions });
-      setShowSubmissionModal(true);
-      setShowReview(false);
-    } catch (err) {
-      handleError(err);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleJumpTo = (idx: number) => {
-    setCurrentIndex(idx);
-    setShowJumpModal(false);
-  };
 
   // UI
   if (loading) {
@@ -148,14 +107,14 @@ export default function TopicQuizPage() {
   if (showReview && result) {
     const reviewQuestions = quiz.questions.map((question, i) => ({
       question,
-      isCorrect: answers[i] === quiz.correctAnswers[i],
+      isCorrect: answers[i].selectedAnswer === quiz.correctAnswers[i],
       userAnswer: answers[i],
     }));
     return (
       <QuizReview
         reviewQuestions={reviewQuestions}
         userAnswers={answers}
-        totalTime={elapsed}
+        totalTime={elapsed.current}
         onBack={() => router.back()}
       />
     );
@@ -168,6 +127,7 @@ export default function TopicQuizPage() {
         current={currentIndex}
         total={quiz.questions.length}
         startTime={startTimeRef.current}
+        elapsed={elapsed}
       />
       <View className="mb-4 rounded-2xl bg-white p-6 shadow">
         <Text className="mb-2 text-lg font-bold text-primary">
@@ -179,18 +139,31 @@ export default function TopicQuizPage() {
           <AnswerOption
             key={idx}
             text={opt.text}
-            selected={answers[currentIndex] === idx}
+            selected={answers[currentIndex]?.selectedAnswer === idx}
             correctAnswer={opt.isCorrect}
-            onPress={() => handleSelect(idx)}
+            onPress={() =>
+              handleSelect(
+                idx,
+                answers,
+                currentIndex,
+                setAnswers,
+                explainRef as React.RefObject<ActionSheetRef>,
+                quiz
+              )
+            }
             disabled={submitting || answers[currentIndex] != null}
           />
         ))}
       </View>
       <View className="mt-6 flex-row items-center justify-between">
-        <Button title="Previous" onPress={handlePrev} disabled={currentIndex === 0 || submitting} />
+        <Button
+          title="Previous"
+          onPress={() => handlePrev(currentIndex, setCurrentIndex, quiz)}
+          disabled={currentIndex === 0 || submitting}
+        />
         <Button
           title="Explain"
-          onPress={() => actionSheetRef.current?.show()}
+          onPress={() => explainRef.current?.show()}
           disabled={answers[currentIndex] == null}
           className="mx-2 py-2"
         />
@@ -203,11 +176,25 @@ export default function TopicQuizPage() {
         {currentIndex === quiz.questions.length - 1 ? (
           <Button
             title={submitting ? 'Submitting...' : 'Submit'}
-            onPress={handleSubmit}
+            onPress={() =>
+              handleSubmit(
+                answers,
+                quiz,
+                setSubmitting,
+                setResult,
+                elapsed,
+                startTimeRef,
+                setShowSubmissionModal
+              )
+            }
             disabled={submitting || answers.length < quiz.questions.length}
           />
         ) : (
-          <Button title="Next" onPress={handleNext} disabled={submitting} />
+          <Button
+            title="Next"
+            onPress={() => handleNext(currentIndex, setCurrentIndex, quiz)}
+            disabled={submitting}
+          />
         )}
       </View>
 
@@ -215,7 +202,7 @@ export default function TopicQuizPage() {
         visible={showJumpModal}
         currentIndex={currentIndex}
         totalQuestions={quiz.questions.length}
-        onJump={handleJumpTo}
+        onJump={(idx) => handleJumpTo(idx, setCurrentIndex, setShowJumpModal)}
         onClose={() => setShowJumpModal(false)}
         submitting={submitting}
       />
@@ -228,11 +215,11 @@ export default function TopicQuizPage() {
         }}
         score={result?.score || 0}
         total={result?.totalQuestions || 0}
-        time={elapsed}
+        time={elapsed.current}
       />
 
       <ActionSheet
-        ref={actionSheetRef}
+        ref={explainRef}
         snapPoints={[50, 90]}
         gestureEnabled
         initialSnapIndex={1}
@@ -247,12 +234,12 @@ export default function TopicQuizPage() {
           {/* <View className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-300" /> */}
           <View className="mb-2 flex-row items-center justify-between">
             <Text className="text-lg font-bold text-neutral-900">Explanation</Text>
-            <Button title="Close" onPress={() => actionSheetRef.current?.hide()} />
+            <Button title="Close" onPress={() => explainRef.current?.hide()} />
           </View>
         </View>
         <ScrollView contentContainerClassName="px-4 pb-6">
           <RenderHTML
-            contentWidth={Math.max(320, 360)}
+            contentWidth={Math.max(320, width - 48)}
             source={{ html: q.explanationHtml as string }}
             customHTMLElementModels={customHTMLElementModels}
             tagsStyles={tagsStyles}

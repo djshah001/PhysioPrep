@@ -53,7 +53,7 @@ export default function TopicDetailsPage() {
   // Fetch topic details
   useEffect(() => {
     if (!topicId) return;
-    fetchTopicDetails(topicId);
+    fetchTopicDetails(topicId, false);
   }, [topicId, fetchTopicDetails]);
 
   const handleTakeQuiz = () => {
@@ -103,7 +103,7 @@ export default function TopicDetailsPage() {
     );
   };
 
-  console.log(topic?.descriptionHtml);
+  // console.log(topic?.descriptionHtml);
 
   if (loading) {
     return (

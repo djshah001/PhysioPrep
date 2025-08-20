@@ -112,8 +112,7 @@ export const fetchSubjectAtom = atom(
       if (callApi) {
         const res = await subjectApi.getSubjectById(subjectId);
         set(subjectAtom, res.data.data);
-      }
-      else{
+      } else {
         const subjects = get(subjectsAtom);
         set(subjectAtom, subjects.find((s) => s._id === subjectId) || null);
       }
@@ -125,15 +124,23 @@ export const fetchSubjectAtom = atom(
   }
 );
 
-export const fetchTopicDetailsAtom = atom(null, async (get, set, topicId: string) => {
-  set(loadingTopicDetailsAtom, true);
-  set(errorTopicDetailsAtom, null);
-  try {
-    const res = await topicApi.getById(topicId);
-    set(topicDetailsAtom, res.data.data || null);
-  } catch (err: any) {
-    set(errorTopicDetailsAtom, err.message || 'Failed to fetch topic details');
-  } finally {
-    set(loadingTopicDetailsAtom, false);
+export const fetchTopicDetailsAtom = atom(
+  null,
+  async (get, set, topicId: string, callApi: boolean) => {
+    set(loadingTopicDetailsAtom, true);
+    set(errorTopicDetailsAtom, null);
+    try {
+      if (callApi) {
+        const res = await topicApi.getById(topicId);
+        set(topicDetailsAtom, res.data.data || null);
+      } else {
+        const topics = get(subjectAtom)?.topics || [];
+        set(topicDetailsAtom, topics.find((t) => t._id === topicId) || null);
+      }
+    } catch (err: any) {
+      set(errorTopicDetailsAtom, err.message || 'Failed to fetch topic details');
+    } finally {
+      set(loadingTopicDetailsAtom, false);
+    }
   }
-});
+);

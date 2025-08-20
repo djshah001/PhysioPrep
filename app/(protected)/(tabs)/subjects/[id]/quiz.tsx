@@ -23,6 +23,13 @@ import { ScrollView } from 'react-native-gesture-handler';
 import ActionSheet, { ActionSheetRef } from 'react-native-actions-sheet';
 import { customHTMLElementModels, renderers, tagsStyles } from 'lib/HtmlRenderers';
 import RenderHTML from 'react-native-render-html';
+import {
+  handleJumpTo,
+  handleNext,
+  handlePrev,
+  handleSelect,
+  handleSubmit,
+} from 'lib/QuizHandelers';
 
 export default function SubjectQuizPage() {
   const { id: subjectId } = useLocalSearchParams<{ id: string }>();
@@ -82,70 +89,7 @@ export default function SubjectQuizPage() {
   // Timer logic removed from parent to avoid per-second re-renders.
   // Elapsed time for submission will be calculated from startTimeRef.
 
-  console.log(elapsed.current);
-
-  // Handlers
-  const handleSelect = (optionIdx: number) => {
-    // Prevent changing answer once selected for this question
-    if (answers[currentIndex] != null) {
-      explainRef.current?.show();
-      return;
-    }
-    const newAnswers = [...answers];
-    newAnswers[currentIndex] = {
-      questionId: quiz?.questions[currentIndex]._id || '',
-      selectedAnswer: optionIdx,
-    };
-    setAnswers(newAnswers);
-    // Auto-open explanation after first selection
-    explainRef.current?.show();
-  };
-
-  const handleNext = () => {
-    if (currentIndex < (quiz?.questions.length || 0) - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!quiz) return;
-    setSubmitting(true);
-
-    // compute final time and freeze the displayed timer immediately
-    const timeSpent = startTimeRef.current
-      ? Math.floor((Date.now() - startTimeRef.current) / 1000)
-      : elapsed.current;
-
-    // freeze elapsed for parent/submit and stop header's interval by clearing startTimeRef
-    elapsed.current = timeSpent;
-    const prevStart = startTimeRef.current;
-    startTimeRef.current = null;
-
-    try {
-      const res = await quizApi.submitQuiz(quiz.sessionId, { answers, timeSpent });
-      setResult({ score: res.data.data.score, totalQuestions: res.data.data.totalQuestions });
-      setShowSubmissionModal(true);
-    } catch (err) {
-      // restore running timer if submission failed so user can retry
-      if (prevStart != null) {
-        startTimeRef.current = Date.now() - elapsed.current * 1000;
-      }
-      handleError(err);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleJumpTo = (idx: number) => {
-    setCurrentIndex(idx);
-    setShowJumpModal(false);
-  };
+  // console.log(elapsed.current);
 
   // UI
   if (loading) {
@@ -208,7 +152,16 @@ export default function SubjectQuizPage() {
           text={opt.text}
           selected={answers[currentIndex]?.selectedAnswer === idx}
           correctAnswer={opt.isCorrect}
-          onPress={() => handleSelect(idx)}
+          onPress={() =>
+            handleSelect(
+              idx,
+              answers,
+              currentIndex,
+              setAnswers,
+              explainRef as React.RefObject<ActionSheetRef>,
+              quiz
+            )
+          }
           disabled={submitting || answers[currentIndex] != null}
         />
       ))}
@@ -216,7 +169,7 @@ export default function SubjectQuizPage() {
       <View className="mt-6 flex-row items-center justify-between">
         <Button
           title="Previous"
-          onPress={handlePrev}
+          onPress={() => handlePrev(currentIndex, setCurrentIndex, quiz)}
           disabled={currentIndex === 0 || submitting}
           leftIcon="chevron-back-outline"
           className="mx-2 rounded-2xl py-2"
@@ -237,7 +190,17 @@ export default function SubjectQuizPage() {
         {currentIndex === quiz.questions.length - 1 ? (
           <Button
             title={submitting ? 'Submitting...' : 'Submit'}
-            onPress={handleSubmit}
+            onPress={() =>
+              handleSubmit(
+                answers,
+                quiz,
+                setSubmitting,
+                setResult,
+                elapsed,
+                startTimeRef,
+                setShowSubmissionModal
+              )
+            }
             disabled={submitting || answers.length < quiz.questions.length}
             rightIcon="checkmark-outline"
             className="justify-cente items-center rounded-2xl bg-green-500 p-4 py-3 shadow-xl shadow-green-800"
@@ -246,7 +209,7 @@ export default function SubjectQuizPage() {
         ) : (
           <Button
             title="Next"
-            onPress={handleNext}
+            onPress={() => handleNext(currentIndex, setCurrentIndex, quiz)}
             disabled={submitting}
             rightIcon="chevron-forward-outline"
             className="items-center justify-center rounded-2xl p-4 py-2"
@@ -258,7 +221,7 @@ export default function SubjectQuizPage() {
         visible={showJumpModal}
         currentIndex={currentIndex}
         totalQuestions={quiz.questions.length}
-        onJump={handleJumpTo}
+        onJump={(idx) => handleJumpTo(idx, setCurrentIndex, setShowJumpModal)}
         onClose={() => setShowJumpModal(false)}
         submitting={submitting}
       />
