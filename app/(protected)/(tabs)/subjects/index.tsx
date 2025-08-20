@@ -26,9 +26,12 @@ export default function SubjectsPage() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
-        <ScrollView className="flex-1 p-6">
-          {[1, 2, 3].map((i) => (
-            <View key={i} className="mb-4 h-32 animate-pulse rounded-2xl bg-card/50" />
+        <ScrollView contentContainerClassName="flex-1 p-6 flex-row flex-wrap">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+            <View
+              key={i}
+              className={`mb-4 ${i % 2 !== 0 ? 'mr-3' : ''} h-40 w-[48%] animate-pulse rounded-2xl bg-card/30`}
+            />
           ))}
         </ScrollView>
       </SafeAreaView>
@@ -61,18 +64,18 @@ export default function SubjectsPage() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
       <ScrollView
-        className="flex-1 p-6"
+        className="flex-1 p-4 py-6"
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={Colors.primary} />
         }>
-        <View className="flex flex-row flex-wrap gap-1">
+        <View className="flex flex-row flex-wrap">
           {subjects.map((subject, index) => (
-            <View key={subject._id} className="w-full md:w-[48%]">
+            <View key={subject._id} className={`w-[48%] ${index % 2 === 0 ? 'mr-4' : ''}`}>
               <SubjectCard subject={subject} index={index} isAdmin={user?.role === 'admin'} />
             </View>
           ))}
         </View>
-        <View className="h-32" /> 
+        <View className="h-32" />
       </ScrollView>
     </SafeAreaView>
   );

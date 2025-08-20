@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { View, Text, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { quizApi } from 'services/api';
@@ -17,14 +17,15 @@ import SubmissionModal from 'components/quiz/SubmissionModal';
 import JumpToQuestionModal from 'components/quiz/JumpToQuestionModal';
 import QuizReview from 'components/questions/QuizReview';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomHeader } from '~/common/CustomHeader';
 import { handleError } from 'lib/utils';
+import { CustomHeader } from '~/common/CustomHeader';
 import { ScrollView } from 'react-native-gesture-handler';
 import ActionSheet, { ActionSheetRef } from 'react-native-actions-sheet';
+import { customHTMLElementModels, renderers, tagsStyles } from 'lib/HtmlRenderers';
 import RenderHTML from 'react-native-render-html';
-import { customHTMLElementModels, tagsStyles, renderers } from 'lib/HtmlRenderers';
-export default function TopicQuizPage() {
-  const { topicId } = useLocalSearchParams<{ topicId: string }>();
+
+export default function SubjectQuizPage() {
+  const { id: subjectId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [quiz, setQuiz] = useAtom(quizAtom);
   const [loading, setLoading] = useAtom(loadingQuizAtom);
@@ -33,36 +34,40 @@ export default function TopicQuizPage() {
   const [answers, setAnswers] = useAtom(quizAnswersAtom);
   const [submitting, setSubmitting] = useState(false);
   const [showReview, setShowReview] = useState(false);
-  const [result, setResult] = useState<{ score: number; totalQuestions: number } | null>(null);
-  const [elapsed, setElapsed] = useState(0);
-  const startTimeRef = useRef<number | null>(null);
-  const [showJumpModal, setShowJumpModal] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
+  const [result, setResult] = useState<{ score: number; totalQuestions: number } | null>(null);
+  const elapsed = useRef(0);
+  // Use a ref for start time to avoid re-rendering the whole screen every second
+  const startTimeRef = useRef<number | null>(null);
   const navigation = useNavigation();
-  const actionSheetRef = useRef<ActionSheetRef>(null);
+  const [showJumpModal, setShowJumpModal] = useState(false);
+  const explainRef = useRef<ActionSheetRef>(null);
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     navigation.setOptions({
       headerShown: true,
       header: () => (
-        <CustomHeader title={`${result ? 'Result Of The Quiz' : 'Topic Quiz'}`} showBack />
+        <CustomHeader title={`${result ? 'Result Of The Quiz' : 'Subject Quiz'} `} showBack />
       ),
     });
   }, [navigation, result]);
 
   // Fetch quiz
   useEffect(() => {
-    if (!topicId) return;
+    if (!subjectId) return;
     setLoading(true);
     setError(null);
 
     const fetchQuiz = async () => {
       try {
-        const res = await quizApi.startTopicQuiz(topicId as string);
+        const res = await quizApi.startSubjectQuiz(subjectId as string);
+        // console.log(JSON.stringify(res.data.data, null, 2));
+        // console.log(res.data.data)
         setQuiz(res.data.data);
         setAnswers([]);
         setCurrentIndex(0);
-        setElapsed(0);
+        elapsed.current = 0;
         startTimeRef.current = Date.now();
       } catch (err) {
         handleError(err);
@@ -72,23 +77,28 @@ export default function TopicQuizPage() {
     };
     fetchQuiz();
     // eslint-disable-next-line
-  }, [topicId]);
+  }, [subjectId]);
 
   // Timer logic removed from parent to avoid per-second re-renders.
   // Elapsed time for submission will be calculated from startTimeRef.
+
+  console.log(elapsed.current);
 
   // Handlers
   const handleSelect = (optionIdx: number) => {
     // Prevent changing answer once selected for this question
     if (answers[currentIndex] != null) {
-      actionSheetRef.current?.show();
+      explainRef.current?.show();
       return;
     }
     const newAnswers = [...answers];
-    newAnswers[currentIndex] = optionIdx;
+    newAnswers[currentIndex] = {
+      questionId: quiz?.questions[currentIndex]._id || '',
+      selectedAnswer: optionIdx,
+    };
     setAnswers(newAnswers);
     // Auto-open explanation after first selection
-    actionSheetRef.current?.show();
+    explainRef.current?.show();
   };
 
   const handleNext = () => {
@@ -106,15 +116,26 @@ export default function TopicQuizPage() {
   const handleSubmit = async () => {
     if (!quiz) return;
     setSubmitting(true);
+
+    // compute final time and freeze the displayed timer immediately
+    const timeSpent = startTimeRef.current
+      ? Math.floor((Date.now() - startTimeRef.current) / 1000)
+      : elapsed.current;
+
+    // freeze elapsed for parent/submit and stop header's interval by clearing startTimeRef
+    elapsed.current = timeSpent;
+    const prevStart = startTimeRef.current;
+    startTimeRef.current = null;
+
     try {
-      const timeSpent = startTimeRef.current
-        ? Math.floor((Date.now() - startTimeRef.current) / 1000)
-        : elapsed;
       const res = await quizApi.submitQuiz(quiz.sessionId, { answers, timeSpent });
       setResult({ score: res.data.data.score, totalQuestions: res.data.data.totalQuestions });
       setShowSubmissionModal(true);
-      setShowReview(false);
     } catch (err) {
+      // restore running timer if submission failed so user can retry
+      if (prevStart != null) {
+        startTimeRef.current = Date.now() - elapsed.current * 1000;
+      }
       handleError(err);
     } finally {
       setSubmitting(false);
@@ -139,7 +160,7 @@ export default function TopicQuizPage() {
       <View className="flex-1 items-center justify-center bg-background p-6">
         <Ionicons name="alert-circle-outline" size={48} color="#ef4444" className="mb-2" />
         <Text className="mb-2 text-lg text-red-500">{error}</Text>
-        <Button title="Retry" onPress={() => router.reload()} className="mt-4" />
+        <Button title="Retry" onPress={() => router.dismissAll()} className="mt-4" />
       </View>
     );
   }
@@ -148,26 +169,31 @@ export default function TopicQuizPage() {
   if (showReview && result) {
     const reviewQuestions = quiz.questions.map((question, i) => ({
       question,
-      isCorrect: answers[i] === quiz.correctAnswers[i],
+      isCorrect: answers[i].selectedAnswer === quiz.correctAnswers[i],
       userAnswer: answers[i],
     }));
     return (
       <QuizReview
+        key={quiz.sessionId}
+        // actionSheetRef={actionSheetRef as React.RefObject<ActionSheetRef>}
+        totalTime={elapsed.current}
         reviewQuestions={reviewQuestions}
         userAnswers={answers}
-        totalTime={elapsed}
         onBack={() => router.back()}
       />
     );
   }
 
+  // console.log(JSON.stringify(quiz))
   const q = quiz.questions[currentIndex];
+  // console.log(q.explanationHtml);
   return (
     <ScrollView contentContainerClassName=" bg-background p-4">
       <QuizHeader
         current={currentIndex}
         total={quiz.questions.length}
         startTime={startTimeRef.current}
+        elapsed={elapsed}
       />
       <View className="mb-4 rounded-2xl bg-white p-6 shadow">
         <Text className="mb-2 text-lg font-bold text-primary">
@@ -175,42 +201,59 @@ export default function TopicQuizPage() {
         </Text>
 
         <Text className="mb-4 text-lg leading-6 text-neutral-800">{q.text}</Text>
-        {q.options.map((opt, idx) => (
-          <AnswerOption
-            key={idx}
-            text={opt.text}
-            selected={answers[currentIndex] === idx}
-            correctAnswer={opt.isCorrect}
-            onPress={() => handleSelect(idx)}
-            disabled={submitting || answers[currentIndex] != null}
-          />
-        ))}
       </View>
+      {q.options.map((opt: { text: string; isCorrect: boolean }, idx: number) => (
+        <AnswerOption
+          key={idx}
+          text={opt.text}
+          selected={answers[currentIndex]?.selectedAnswer === idx}
+          correctAnswer={opt.isCorrect}
+          onPress={() => handleSelect(idx)}
+          disabled={submitting || answers[currentIndex] != null}
+        />
+      ))}
+
       <View className="mt-6 flex-row items-center justify-between">
-        <Button title="Previous" onPress={handlePrev} disabled={currentIndex === 0 || submitting} />
         <Button
+          title="Previous"
+          onPress={handlePrev}
+          disabled={currentIndex === 0 || submitting}
+          leftIcon="chevron-back-outline"
+          className="mx-2 rounded-2xl py-2"
+        />
+        {/* <Button
           title="Explain"
           onPress={() => actionSheetRef.current?.show()}
           disabled={answers[currentIndex] == null}
           className="mx-2 py-2"
-        />
+        /> */}
         <Button
           title="Jump"
           onPress={() => setShowJumpModal(true)}
           disabled={submitting}
-          className="mx-2 py-2"
+          leftIcon="swap-horizontal-outline"
+          className="mx-2 rounded-2xl bg-indigo-500 py-2 shadow-xl shadow-indigo-800"
         />
         {currentIndex === quiz.questions.length - 1 ? (
           <Button
             title={submitting ? 'Submitting...' : 'Submit'}
             onPress={handleSubmit}
             disabled={submitting || answers.length < quiz.questions.length}
+            rightIcon="checkmark-outline"
+            className="justify-cente items-center rounded-2xl bg-green-500 p-4 py-3 shadow-xl shadow-green-800"
+            textClassName="mr-0"
           />
         ) : (
-          <Button title="Next" onPress={handleNext} disabled={submitting} />
+          <Button
+            title="Next"
+            onPress={handleNext}
+            disabled={submitting}
+            rightIcon="chevron-forward-outline"
+            className="items-center justify-center rounded-2xl p-4 py-2"
+            textClassName="mr-0"
+          />
         )}
       </View>
-
       <JumpToQuestionModal
         visible={showJumpModal}
         currentIndex={currentIndex}
@@ -219,7 +262,6 @@ export default function TopicQuizPage() {
         onClose={() => setShowJumpModal(false)}
         submitting={submitting}
       />
-
       <SubmissionModal
         visible={!!result && showSubmissionModal}
         onClose={() => {
@@ -228,11 +270,11 @@ export default function TopicQuizPage() {
         }}
         score={result?.score || 0}
         total={result?.totalQuestions || 0}
-        time={elapsed}
+        time={elapsed.current}
       />
 
       <ActionSheet
-        ref={actionSheetRef}
+        ref={explainRef}
         snapPoints={[50, 90]}
         gestureEnabled
         initialSnapIndex={1}
@@ -244,15 +286,16 @@ export default function TopicQuizPage() {
           shadowRadius: 8,
         }}>
         <View className="px-4 pb-2 pt-3">
+          {/* Handle: uncomment if you want a visual grabber */}
           {/* <View className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-300" /> */}
           <View className="mb-2 flex-row items-center justify-between">
             <Text className="text-lg font-bold text-neutral-900">Explanation</Text>
-            <Button title="Close" onPress={() => actionSheetRef.current?.hide()} />
+            <Button title="Close" onPress={() => explainRef?.current?.hide()} />
           </View>
         </View>
         <ScrollView contentContainerClassName="px-4 pb-6">
           <RenderHTML
-            contentWidth={Math.max(320, 360)}
+            contentWidth={Math.max(320, width - 48)}
             source={{ html: q.explanationHtml as string }}
             customHTMLElementModels={customHTMLElementModels}
             tagsStyles={tagsStyles}
@@ -275,6 +318,7 @@ export default function TopicQuizPage() {
             }}
           />
         </ScrollView>
+        <View className="mb-40" />
       </ActionSheet>
     </ScrollView>
   );

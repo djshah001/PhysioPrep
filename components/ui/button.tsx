@@ -47,7 +47,7 @@ export function Button({
           {leftIcon && (
             <Ionicons name={leftIcon} size={leftIconSize} color={leftIconColor} className="" />
           )}
-          <Text className={cn('text-base font-semibold text-white ', textClassName)}>{title}</Text>
+          <Text className={cn('text-base font-semibold text-white leading-6 ', textClassName)}>{title}</Text>
           {rightIcon && (
             <Ionicons name={rightIcon} size={rightIconSize} color={rightIconColor} className="" />
           )}

@@ -51,7 +51,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question, index }) =
                   backgroundColor: 'transparent',
                 },
               }}>
-              <BlurView intensity={90} tint="dark" className="overflow-hidden rounded-xl">
+              <BlurView intensity={90} 
+              experimentalBlurMethod='dimezisBlurView'
+              tint="dark" 
+              className="overflow-hidden rounded-xl">
                 <PopupMenuOption text="Edit" icon="create-outline" onSelect={handleEdit} />
                 <PopupMenuOption
                   text="Delete"

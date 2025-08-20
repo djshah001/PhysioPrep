@@ -2,10 +2,12 @@ import React from 'react';
 import { TextInput, TextInputProps, View, Text } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Colors } from 'constants/Colors';
+import colors from 'tailwindcss/colors';
+import { cn } from 'lib/utils';
 
 interface InputProps extends TextInputProps {
-  className?: string;
+  inputClassName?: string;
+  containerClassName?: string;
   label?: string;
   maxLength?: number;
   showCount?: boolean;
@@ -14,7 +16,8 @@ interface InputProps extends TextInputProps {
 }
 
 export function Input({
-  className = '',
+  containerClassName,
+  inputClassName,
   label,
   maxLength,
   showCount = true,
@@ -25,32 +28,35 @@ export function Input({
 }: InputProps) {
   const InputComponent = (
     <TextInput
-      className={`border rounded-xl px-4 py-3 text-base text-white border-white ${className}`}
-      placeholderTextColor={Colors.white2}
+      className={cn(
+        `rounded-xl border border-neutral-500 px-4 py-4 text-base text-neutral-600 `,
+      )}
+      placeholderTextColor={colors.neutral[500]}
       value={value}
       maxLength={maxLength}
       {...props}
     />
   );
 
-  if (!label) return InputComponent;
-
   return (
     <Animated.View entering={FadeInDown.delay(200).springify()} className="mb-6">
-      <View className="mb-2 flex-row items-center justify-between">
-        <Text className="text-lg font-medium text-foreground">{label}</Text>
-        {maxLength && showCount && (
-          <Text className="text-sm text-foreground/60">
-            {value.length}/{maxLength}
-          </Text>
-        )}
-      </View>
+      {label && (
+        <View className="flex-row items-center justify-between">
+          <Text className="ml-2 text-base font-semibold text-neutral-700">{label}</Text>
+          {maxLength && showCount && (
+            <Text className="text-sm text-neutral-500/60">
+              {value.length}/{maxLength}
+            </Text>
+          )}
+        </View>
+      )}
       <BlurView
         intensity={blurIntensity}
         tint={blurTint}
-        className="overflow-hidden rounded-xl border border-foreground/10">
+        // experimentalBlurMethod="dimezisBlurView"
+        className={cn("overflow-hidden rounded-xl border border-foreground/10",containerClassName)}>
         {InputComponent}
       </BlurView>
     </Animated.View>
   );
-} 
+}

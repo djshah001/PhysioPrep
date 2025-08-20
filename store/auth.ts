@@ -1,4 +1,5 @@
-import { atom, useAtom } from 'jotai';
+import { atomWithStorage } from 'jotai/utils';
+import { useAtom } from 'jotai';
 
 export interface UserPreferences {
   notifications: boolean;
@@ -34,13 +35,12 @@ export interface User {
 }
 
 // Atoms
-export const userAtom = atom<User | null>(null);
-export const tokenAtom = atom<string | null>(null);
-export const isLoadingAtom = atom<boolean>(false);
-export const isLoggedInAtom = atom<boolean>(false);
+export const userAtom = atomWithStorage<User|null>("User",null);
+export const tokenAtom = atomWithStorage<string|null>("token","");
+export const isLoggedInAtom = atomWithStorage<boolean>("isLoggedIn",false);
+export const isLoadingAtom = atomWithStorage<boolean>("isLoading",false);
 
 // Hooks
 export const useUser = () => useAtom(userAtom);
 export const useToken = () => useAtom(tokenAtom);
-export const useIsLoading = () => useAtom(isLoadingAtom);
 export const useIsLoggedIn = () => useAtom(isLoggedInAtom);

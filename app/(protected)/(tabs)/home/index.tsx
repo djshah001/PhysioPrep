@@ -19,6 +19,7 @@ import Animated, {
   interpolateColor,
 } from 'react-native-reanimated';
 import { Colors } from 'constants/Colors';
+import colors from 'tailwindcss/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -147,7 +148,7 @@ export default function HomePage() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
-      <StatusBar barStyle={'default'} backgroundColor={'#0a0a0a'} />
+      <StatusBar barStyle='dark-content' />
       <ScrollView
         className="flex-1"
         onScroll={(event) => {

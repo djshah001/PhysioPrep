@@ -72,7 +72,7 @@ export function CustomHeader({
   return (
     <View
       style={[{ paddingTop: insets.top }]}
-      className={`${className} border-b border-primary/50 bg-background px-2`}>
+      className={`${className} bg-white px-2 py-1 shadow-lg shadow-neutral-700`}>
       <View className="overflow-hidden">
         <View className="h-14 flex-row items-center px-4">
           {(leftIcons.length > 0 || showBack) && (
@@ -86,7 +86,7 @@ export function CustomHeader({
             </View>
           )}
 
-          <Text className="text-center text-2xl font-bold text-primary" numberOfLines={1}>
+          <Text className="text-center text-3xl font-bold text-primary" numberOfLines={1}>
             {title}
           </Text>
 

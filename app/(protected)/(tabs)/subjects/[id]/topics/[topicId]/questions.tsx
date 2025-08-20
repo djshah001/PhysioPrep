@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ActivityIndicator, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useAtom, useSetAtom } from 'jotai';
@@ -16,7 +16,7 @@ import {
 } from 'store/question';
 import { useAuth } from 'hooks/useAuth';
 import { Colors } from 'constants/Colors';
-import { SimpleSelect } from 'components/questions/QuestionForm';
+import { SimpleSelect } from 'components/ui/SimpleSelect';
 import { Input } from 'components/ui/input';
 import { FlatList } from 'react-native-gesture-handler';
 
@@ -33,7 +33,7 @@ const TIER_OPTIONS = [
 ];
 
 export default function TopicQuestionsPage() {
-  const { topicId } = useLocalSearchParams<{ topicId: string }>();
+  const { topicId, topicName } = useLocalSearchParams<{ topicId: string; topicName: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const [questions] = useAtom(questionsAtom);
@@ -47,7 +47,6 @@ export default function TopicQuestionsPage() {
   const [search, setSearch] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const [tier, setTier] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
 
   // Fetch first page on mount or when filters/search change
@@ -59,14 +58,17 @@ export default function TopicQuestionsPage() {
     setInitialLoad(false);
   }, [topicId, search, difficulty, tier, fetchQuestions, resetQuestions]);
 
+  // Set navigation header
+  useEffect(() => {
+    navigation.setOptions({
+      header: () => <CustomHeader title={`Questions for ${topicName}`} showBack />,
+      headerShown: true,
+    });
+  }, [navigation, topicName]);
+
   // Infinite scroll: fetch next page
   const handleEndReached = useCallback(() => {
-    if (
-      !loading &&
-      pagination?.hasNextPage &&
-      topicId &&
-      !initialLoad
-    ) {
+    if (!loading && pagination?.hasNextPage && topicId && !initialLoad) {
       fetchQuestions({
         topicId,
         page: (pagination.currentPage || 1) + 1,
@@ -79,12 +81,10 @@ export default function TopicQuestionsPage() {
   }, [loading, pagination, topicId, search, difficulty, tier, fetchQuestions, initialLoad]);
 
   // Pull to refresh
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     if (!topicId) return;
-    setRefreshing(true);
-    resetQuestions();
-    fetchQuestions({ topicId, page: 1, search, difficulty, tier });
-    setRefreshing(false);
+    await resetQuestions();
+    await fetchQuestions({ topicId, page: 1, search, difficulty, tier });
   }, [topicId, search, difficulty, tier, fetchQuestions, resetQuestions]);
 
   // Render item
@@ -114,7 +114,8 @@ export default function TopicQuestionsPage() {
           <View className="p-6 pb-2">
             <View className="mb-4 flex-row items-center justify-between">
               <Text className="text-xl font-bold text-foreground">
-                {pagination?.totalQuestions ?? 0} Question{(pagination?.totalQuestions ?? 0) === 1 ? '' : 's'}
+                {pagination?.totalQuestions ?? 0} Question
+                {(pagination?.totalQuestions ?? 0) === 1 ? '' : 's'}
               </Text>
               {user?.role === 'admin' && (
                 <Button
@@ -165,16 +166,21 @@ export default function TopicQuestionsPage() {
             ListFooterComponent={ListFooterComponent}
             refreshControl={
               <RefreshControl
-                refreshing={refreshing}
+                refreshing={loading}
                 onRefresh={onRefresh}
                 tintColor={Colors.primary}
               />
             }
+            showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              <View className="mt-20 flex-1 items-center justify-center">
-                <Text className="text-lg text-foreground/60">No questions found.</Text>
-                <Text className="text-sm text-foreground/50">Be the first to add one!</Text>
-              </View>
+              loading ? (
+                <QuestionsSkeleton />
+              ) : (
+                <View className="mt-20 flex-1 items-center justify-center">
+                  <Text className="text-lg text-foreground/60">No questions found.</Text>
+                  <Text className="text-sm text-foreground/50">Be the first to add one!</Text>
+                </View>
+              )
             }
           />
         </>

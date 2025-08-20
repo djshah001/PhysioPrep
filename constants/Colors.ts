@@ -4,24 +4,21 @@
  */
 
 export const Colors = {
-  white: 'rgb(255, 255, 255)',
   white2: 'rgb(230, 230, 230)',
-  black: 'rgb(0, 0, 0)',
   grey6: 'rgb(29, 30, 28)',
   grey5: 'rgb(48, 50, 47)',
   grey4: 'rgb(61, 63, 59)',
   grey3: 'rgb(81, 85, 79)',
   grey2: 'rgb(124, 129, 121)',
   grey: 'rgb(162, 167, 160)',
-  background: 'rgb(10, 10, 10)',
-  foreground: 'rgb(249, 254, 247)',
+  background: 'rgb(246, 246, 248)',
+  foreground: 'rgb(241, 240, 245)',
   root: 'rgb(2, 4, 1)',
   card: 'rgb(2, 4, 1)',
   destructive: 'rgb(254, 67, 54)',
-  primary: 'rgb(128, 224, 77)',
-  secondary: 'rgb(155, 220, 148)',
+  primary: 'rgb(107, 169, 253)',
+  secondary: 'rgb(59, 130, 246)',
   accent: 'rgb(86, 218, 220)',
-  yellow: 'rgb(255, 221, 51)',
 };
 
 // export const Colors = {

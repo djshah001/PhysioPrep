@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { QuestionForm } from 'components/questions/QuestionForm';
@@ -40,7 +40,6 @@ export default function EditQuestionPage() {
   const handleEditQuestion = async (values: QuestionFormValues) => {
     if (!questionId) return;
     await updateQuestion({ questionId, data: values });
-    router.back();
   };
 
   if (isFetching || !question) {

@@ -1,9 +1,9 @@
-import { Stack } from "expo-router";
+import { Stack } from 'expo-router';
 
 // SplashScreen.preventAutoHideAsync();
 
 export default function ProtectedLayout() {
- 
+
   return (
     <Stack
       screenOptions={{

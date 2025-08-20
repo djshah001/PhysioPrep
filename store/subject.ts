@@ -1,6 +1,6 @@
 // If you haven't already, install zustand: npm install zustand
 import { atom } from 'jotai';
-import { Subject, TopicFormValues } from 'types/types';
+import { Subject, TopicFormValues, Topic } from 'types/types';
 import { subjectApi, topicApi } from 'services/api';
 import { handleError } from 'lib/utils';
 import { AxiosError } from 'axios';
@@ -9,6 +9,11 @@ export const subjectsAtom = atom<Subject[]>([]);
 export const loadingAtom = atom(false);
 export const errorAtom = atom<string | null>(null);
 export const subjectAtom = atom<Subject | null>(null);
+
+// Topic details atoms
+export const topicDetailsAtom = atom<Topic | null>(null);
+export const loadingTopicDetailsAtom = atom(false);
+export const errorTopicDetailsAtom = atom<string | null>(null);
 
 export const fetchSubjectsAtom = atom(null, async (get, set) => {
   set(loadingAtom, true);
@@ -35,7 +40,10 @@ export const addTopicAtom = atom(
       set(subjectAtom, updatedSubject);
       // Also update subjectsAtom if needed
       const subjects = get(subjectsAtom);
-      set(subjectsAtom, subjects.map(s => s._id === updatedSubject._id ? updatedSubject : s));
+      set(
+        subjectsAtom,
+        subjects.map((s) => (s._id === updatedSubject._id ? updatedSubject : s))
+      );
     } catch (err: any) {
       set(errorAtom, err.message || 'Failed to add topic');
     } finally {
@@ -55,7 +63,10 @@ export const updateTopicAtom = atom(
       set(subjectAtom, updatedSubject);
       // Also update subjectsAtom if needed
       const subjects = get(subjectsAtom);
-      set(subjectsAtom, subjects.map(s => s._id === updatedSubject._id ? updatedSubject : s));
+      set(
+        subjectsAtom,
+        subjects.map((s) => (s._id === updatedSubject._id ? updatedSubject : s))
+      );
     } catch (err: any) {
       set(errorAtom, err.message || 'Failed to update topic');
     } finally {
@@ -72,14 +83,17 @@ export const deleteTopicAtom = atom(null, async (get, set, topicId: string) => {
     if (res.data.success) {
       const updatedSubject = res.data.data.subject;
       // console.log(JSON.stringify(updatedSubject, null, 2));
-      
+
       // Update the atom for the subject detail page
       set(subjectAtom, updatedSubject);
-      
+
       // Update the atom for the subjects list page
       const subjects = get(subjectsAtom);
-      set(subjectsAtom, subjects.map(s => s._id === updatedSubject._id ? updatedSubject : s));
-      
+      set(
+        subjectsAtom,
+        subjects.map((s) => (s._id === updatedSubject._id ? updatedSubject : s))
+      );
+
       console.log(`Deleted topic with ID: ${topicId}`);
     }
   } catch (err) {
@@ -89,15 +103,37 @@ export const deleteTopicAtom = atom(null, async (get, set, topicId: string) => {
   }
 });
 
-export const fetchSubjectAtom = atom(null, async (get, set, subjectId: string) => {
-  set(loadingAtom, true);
-  set(errorAtom, null);
+export const fetchSubjectAtom = atom(
+  null,
+  async (get, set, subjectId: string, callApi: boolean) => {
+    set(loadingAtom, true);
+    set(errorAtom, null);
+    try {
+      if (callApi) {
+        const res = await subjectApi.getSubjectById(subjectId);
+        set(subjectAtom, res.data.data);
+      }
+      else{
+        const subjects = get(subjectsAtom);
+        set(subjectAtom, subjects.find((s) => s._id === subjectId) || null);
+      }
+    } catch (err: any) {
+      set(errorAtom, err.message || 'Failed to fetch subject');
+    } finally {
+      set(loadingAtom, false);
+    }
+  }
+);
+
+export const fetchTopicDetailsAtom = atom(null, async (get, set, topicId: string) => {
+  set(loadingTopicDetailsAtom, true);
+  set(errorTopicDetailsAtom, null);
   try {
-    const res = await subjectApi.getSubjectById(subjectId);
-    set(subjectAtom, res.data.data || null);
+    const res = await topicApi.getById(topicId);
+    set(topicDetailsAtom, res.data.data || null);
   } catch (err: any) {
-    set(errorAtom, err.message || 'Failed to fetch subject');
+    set(errorTopicDetailsAtom, err.message || 'Failed to fetch topic details');
   } finally {
-    set(loadingAtom, false);
+    set(loadingTopicDetailsAtom, false);
   }
 });
