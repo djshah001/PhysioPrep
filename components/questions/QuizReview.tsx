@@ -12,7 +12,7 @@ interface QuizReviewProps {
     isCorrect?: boolean;
     userAnswer?: quizAnswerType;
   }[];
-  userAnswers: quizAnswerType[];
+  userAnswers: quizAnswerType[] | number[];
   onBack?: () => void;
   totalTime: number;
 }

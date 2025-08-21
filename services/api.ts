@@ -78,16 +78,11 @@ export const questionApi = {
 };
 
 export const testApi = {
-  getTestById: (id: string) => api.get(`/tests/${id}`),
-  getUserTests: () => api.get('/tests'),
-  startSubjectTest: (subjectId: string, data: { timeLimit: number; difficulty: string }) =>
-    api.post(`/tests/subject/${subjectId}/start`, data),
-  startTopicTest: (topicId: string, data: { timeLimit: number; difficulty: string }) =>
-    api.post(`/tests/topic/${topicId}/start`, data),
-  startMixedTest: (data: { timeLimit: number; difficulty: string }) =>
-    api.post('/tests/mixed/start', data),
-  submitTest: (testId: string, data: { answers: number[]; timeSpent?: number }) =>
-    api.post(`/tests/${testId}/complete`, data),
+  startComprehensive: (data: { count: number; duration: number; difficulty?: 'easy' | 'medium' | 'hard' | 'mixed' }) =>
+    api.post('/tests/comprehensive/start', data),
+  submitComprehensive: (
+    data: { sessionId: string; answers: { questionId: string; selectedAnswer: number }[]; timeSpent?: number }
+  ) => api.post('/tests/comprehensive/submit', data),
 };
 
 export default api;

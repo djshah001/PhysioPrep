@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { TouchableOpacity, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
 type Props = {
   text: string;
@@ -26,23 +27,40 @@ function AnswerOption({ text, selected, onPress, disabled, correctAnswer }: Prop
 
   const textColor = selected ? 'text-white' : 'text-neutral-800';
   const iconColor = selected ? '#fff' : '#6366F1';
+  // Reanimated shared value for scaling
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePress = () => {
+    // animate to 1.2 then back to 1
+    scale.value = withTiming(0.9, { duration: 120 }, () => {
+      scale.value = withTiming(1, { duration: 120 });
+    });
+    if (onPress) onPress();
+  };
+  
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.85}
-      disabled={disabled && !selected}
-      className={`mb-2 flex-row items-center rounded-xl border px-4 py-3 ${bgClass} ${disabled ? (selected ? 'opacity-100' : 'opacity-60') : ''}`}>
-      <Ionicons
-        name={selected ? 'radio-button-on' : 'ellipse-outline'}
-        size={22}
-        color={iconColor}
-        style={{ marginRight: 12 }}
-      />
-      <Text className={`flex-1 text-base ${selected ? 'font-bold' : 'font-semibold'} ${textColor}`}>
-        {text}
-      </Text>
-    </TouchableOpacity>
+    <Animated.View style={animatedStyle} className={`mb-2`}>
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.85}
+        disabled={disabled && !selected}
+        className={`flex-row items-center rounded-xl border px-4 py-3 ${bgClass} ${disabled ? (selected ? 'opacity-100' : 'opacity-60') : ''}`}>
+        <Ionicons
+          name={selected ? 'radio-button-on' : 'ellipse-outline'}
+          size={22}
+          color={iconColor}
+          style={{ marginRight: 12 }}
+        />
+        <Text className={`flex-1 text-base ${selected ? 'font-bold' : 'font-semibold'} ${textColor}`}>
+          {text}
+        </Text>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 

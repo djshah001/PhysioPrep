@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { ProgressBar } from 'components/ProgressBar';
 import { Ionicons } from '@expo/vector-icons';
 import colors from 'tailwindcss/colors';
+import { Timer } from '~/ui/Timer';
 
 export const TimerDisplay = ({ seconds }: { seconds: number }) => (
   <View className="flex-row items-center">
@@ -18,9 +19,22 @@ type HeaderProps = {
   startTime?: number | null;
   // Fallback: static elapsed value
   elapsed: RefObject<number>;
+  duration?: number;
+  onExpire?: () => void;
+  showTimer?: boolean;
+  showTimeDisplay?: boolean;
 };
 
-export default function QuizHeader({ current, total, startTime, elapsed }: HeaderProps) {
+export default function QuizHeader({
+  current,
+  total,
+  startTime,
+  elapsed,
+  duration,
+  onExpire,
+  showTimer = false,
+  showTimeDisplay = true,
+}: HeaderProps) {
   // maintain local seconds state so this header re-renders every second
   const [seconds, setSeconds] = useState<number>(() => {
     if (startTime && startTime > 0) {
@@ -61,7 +75,9 @@ export default function QuizHeader({ current, total, startTime, elapsed }: Heade
         style={{ flex: 1, marginRight: 12 }}
         color={colors.indigo[500]}
       />
-      <TimerDisplay seconds={seconds} />
+      {showTimeDisplay && <TimerDisplay seconds={seconds} />}
+
+      {showTimer && duration && <Timer duration={duration} onExpire={onExpire} />}
     </View>
   );
 }

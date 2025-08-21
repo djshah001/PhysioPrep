@@ -3,6 +3,7 @@ import { Colors } from '~/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { cn } from 'lib/utils';
 import { useState } from 'react';
+import colors from 'tailwindcss/colors';
 
 export function SimpleSelect({
   label,
@@ -19,12 +20,12 @@ export function SimpleSelect({
   const selected = options.find((o) => o.value === value)?.label || '';
   return (
     <View className="mb-2">
-      <Text className="mb-1 text-lg font-medium text-foreground">{label}</Text>
+      <Text className="mb-1 text-lg text-neutral-700">{label}</Text>
       <Pressable
-        className="border-border flex-row items-center justify-between rounded-lg border bg-card px-4 py-3"
+        className="flex-row items-center justify-between bg-primary px-4 py-3 rounded-2xl shadow-lg"
         onPress={() => setModalVisible(true)}>
         <Text className="text-base text-white">{selected}</Text>
-        <Ionicons name="chevron-down" size={20} color={Colors.primary} />
+        <Ionicons name="chevron-down" size={20} color={colors.white} />
       </Pressable>
       <Modal
         visible={modalVisible}

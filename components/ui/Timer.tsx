@@ -1,5 +1,8 @@
+import { cn } from 'lib/utils';
 import React, { useEffect, useState, useRef } from 'react';
-import { Text, View, StyleSheet, ViewStyle } from 'react-native';
+import { Text, View, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
 
 interface TimerProps {
   duration: number; // in seconds
@@ -15,7 +18,9 @@ export const Timer: React.FC<TimerProps> = ({ duration, onExpire, onTick, classN
 
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; };
+    return () => {
+      mounted.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -37,32 +42,21 @@ export const Timer: React.FC<TimerProps> = ({ duration, onExpire, onTick, classN
     setTimeLeft(duration);
   }, [duration]);
 
-  const minutes = Math.floor(timeLeft / 60);
+  const hours = Math.floor(timeLeft / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
   const seconds = timeLeft % 60;
-  const formatted = `${minutes.toString().padStart(2, '0')}:${seconds
+  const formatted = ` ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds
     .toString()
     .padStart(2, '0')}`;
 
   return (
-    <View style={[styles.container, style]} className={className}>
-      <Text style={styles.text}>{formatted}</Text>
+    <View
+      className={cn(
+        'min-w-16 flex-row items-center justify-center',
+        className
+      )}>
+        <Ionicons name="timer-outline" size={20} color="#EF4444" />
+        <Text className="ml-1 text-base font-semibold text-red-500">{formatted}</Text>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 8,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 60,
-  },
-  text: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#EF4444',
-    letterSpacing: 1,
-  },
-}); 

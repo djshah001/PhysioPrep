@@ -24,6 +24,21 @@ export default function SubjectsLayout() {
         }}
       />
       <Stack.Screen
+        name="comprehensive-test"
+         options={{
+          // headerShown: false,
+          header: () => (
+            <CustomHeader
+              title="Comprehensive Test"
+              showBack
+            />
+          ),
+          // headerTransparent: true,
+          // headerBackground: () => <HeaderBlurView height={insets.top + 60} />,
+          
+        }}
+      />
+      <Stack.Screen
         name="[id]"
         options={{
           headerShown: false,

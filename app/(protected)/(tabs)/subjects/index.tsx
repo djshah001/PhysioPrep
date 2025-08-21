@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, ScrollView, RefreshControl, Text } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, ScrollView, RefreshControl, Text, TextInput } from 'react-native';
 import { useAuth } from 'hooks/useAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from 'constants/Colors';
@@ -7,13 +7,17 @@ import { SubjectCard } from 'components/subject/SubjectCard';
 import { EmptySubject } from 'components/subject/EmptySubject';
 import { useAtom, useSetAtom } from 'jotai';
 import { subjectsAtom, loadingAtom, errorAtom, fetchSubjectsAtom } from 'store/subject';
+import { Button } from 'components/ui/button';
+import { useRouter } from 'expo-router';
 
 export default function SubjectsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [subjects] = useAtom(subjectsAtom);
   const [loading] = useAtom(loadingAtom);
   const [error] = useAtom(errorAtom);
   const fetchSubjects = useSetAtom(fetchSubjectsAtom);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     fetchSubjects();
@@ -22,6 +26,15 @@ export default function SubjectsPage() {
   const onRefresh = () => {
     fetchSubjects();
   };
+
+  const filteredSubjects = useMemo(() => {
+    if (!query || !subjects) return subjects;
+    const q = query.toLowerCase().trim();
+    return subjects.filter((s: any) => {
+      const title = (s.title || s.name || '').toString().toLowerCase();
+      return title.includes(q);
+    });
+  }, [query, subjects]);
 
   if (loading) {
     return (
@@ -64,16 +77,41 @@ export default function SubjectsPage() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
       <ScrollView
-        className="flex-1 p-4 py-6"
+        className="flex-1 p-6 py-6"
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={Colors.primary} />
         }>
+        <View className="mb-4">
+          <View className="flex-1 mb-2">
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search subjects..."
+              placeholderTextColor="rgba(0,0,0,0.4)"
+              className="h-12 px-4 rounded-2xl bg-card/10 text-base"
+              accessibilityLabel="Search subjects"
+            />
+          </View>
+            <Button
+              title="Start Comprehensive Test"
+              onPress={() => router.push('/subjects/comprehensive-test')}
+              className="rounded-2xl bg-indigo-500 h-12 justify-center"
+              textClassName="text-white font-bold"
+            />
+        </View>
+
         <View className="flex flex-row flex-wrap">
-          {subjects.map((subject, index) => (
-            <View key={subject._id} className={`w-[48%] ${index % 2 === 0 ? 'mr-4' : ''}`}>
-              <SubjectCard subject={subject} index={index} isAdmin={user?.role === 'admin'} />
+          {filteredSubjects && filteredSubjects.length > 0 ? (
+            filteredSubjects.map((subject, index) => (
+              <View key={subject._id} className={`w-[48%] ${index % 2 === 0 ? 'mr-3' : ''}`}>
+                <SubjectCard subject={subject} index={index} isAdmin={user?.role === 'admin'} />
+              </View>
+            ))
+          ) : (
+            <View className="w-full items-center mt-8">
+              <Text className="text-muted">No subjects match your search.</Text>
             </View>
-          ))}
+          )}
         </View>
         <View className="h-32" />
       </ScrollView>
