@@ -101,14 +101,14 @@ export default function SubjectDetailPage() {
                 title="Subject Quiz"
                 leftIcon="school-outline"
                 onPress={() => router.push(`/subjects/${subject._id}/quiz`)}
-                className="flex-1 rounded-3xl bg-amber-400 shadow-2xl shadow-amber-400"
+                className="flex-1 rounded-3xl bg-indigo-500/80 shadow-md"
                 textClassName="text-white text-lg font-bold"
               />
               <Button
-                title="Subject Test"
+                title="Comprehensive Test"
                 rightIcon="clipboard-outline"
-                onPress={() => router.push(`/subjects/${subject._id}/test`)}
-                className="flex-1 rounded-3xl bg-green-400 shadow-2xl shadow-green-400"
+                onPress={() => router.push(`/subjects/comprehensive-test`)}
+                className="flex-1 rounded-3xl bg-neutral-900 shadow-md"
                 textClassName="text-white text-lg font-bold"
               />
             </View>
@@ -128,7 +128,6 @@ export default function SubjectDetailPage() {
                 subjectId={subject._id}
                 isAdmin={user?.role === 'admin'}
                 onTakeQuiz={() => router.push(`/subjects/${subject._id}/topics/${topic._id}/quiz`)}
-                onTakeTest={() => router.push(`/subjects/${subject._id}/topics/${topic._id}/test`)}
                 onViewDetails={() => router.push(`/subjects/${subject._id}/topics/${topic._id}`)}
               />
             ))

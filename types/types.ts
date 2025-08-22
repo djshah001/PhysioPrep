@@ -90,28 +90,7 @@ export interface Quiz {
   mode: 'subject-quiz' | 'topic-quiz';
 }
 
-export interface Test {
-  _id: string;
-  user: string;
-  subject?: string;
-  topic?: string;
-  mode: 'subject-test' | 'topic-test' | 'mixed-test';
-  difficulty: 'easy' | 'medium' | 'hard' | 'mixed';
-  totalQuestions: number;
-  questions: TestQuestion[];
-  status: 'pending' | 'in_progress' | 'completed' | 'abandoned';
-  score: number;
-  startedAt?: string;
-  completedAt?: string;
-  timeLimit: number;
-}
 
-export interface TestQuestion {
-  question: Question;
-  userAnswer?: number;
-  isCorrect?: boolean;
-  timeSpent?: number;
-}
 
 export interface Question {
   _id: string;

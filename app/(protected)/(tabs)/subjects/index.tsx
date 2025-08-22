@@ -7,12 +7,9 @@ import { SubjectCard } from 'components/subject/SubjectCard';
 import { EmptySubject } from 'components/subject/EmptySubject';
 import { useAtom, useSetAtom } from 'jotai';
 import { subjectsAtom, loadingAtom, errorAtom, fetchSubjectsAtom } from 'store/subject';
-import { Button } from 'components/ui/button';
-import { useRouter } from 'expo-router';
 
 export default function SubjectsPage() {
   const { user } = useAuth();
-  const router = useRouter();
   const [subjects] = useAtom(subjectsAtom);
   const [loading] = useAtom(loadingAtom);
   const [error] = useAtom(errorAtom);
@@ -36,9 +33,14 @@ export default function SubjectsPage() {
     });
   }, [query, subjects]);
 
+  // console.log(testState.Qs.length)
+
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
+        <View className="mx-4 mt-4 animate-pulse rounded-2xl">
+          <View className="h-12 w-full bg-white rounded-3xl shadow-lg " />
+        </View>
         <ScrollView contentContainerClassName="flex-1 p-6 flex-row flex-wrap">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
             <View
@@ -81,23 +83,23 @@ export default function SubjectsPage() {
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={Colors.primary} />
         }>
-        <View className="mb-4">
-          <View className="flex-1 mb-2">
+        <View className="mb-6">
+          <View className="mb-3">
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Search subjects..."
-              placeholderTextColor="rgba(0,0,0,0.4)"
-              className="h-12 px-4 rounded-2xl bg-card/10 text-base"
+              placeholder="Search subjects"
+              placeholderTextColor="#9CA3AF"
+              className="h-13 rounded-3xl bg-white px-4 text-base border border-neutral-400 text-neutral-800 shadow-lg"
               accessibilityLabel="Search subjects"
             />
           </View>
-            <Button
-              title="Start Comprehensive Test"
-              onPress={() => router.push('/subjects/comprehensive-test')}
-              className="rounded-2xl bg-indigo-500 h-12 justify-center"
-              textClassName="text-white font-bold"
-            />
+          {/* <Button
+            title="Start Comprehensive Test"
+            onPress={() => router.push('/subjects/comprehensive-test')}
+            className="h-12 justify-center rounded-3xl bg-neutral-900 shadow-md"
+            textClassName="text-white font-bold"
+          /> */}
         </View>
 
         <View className="flex flex-row flex-wrap">

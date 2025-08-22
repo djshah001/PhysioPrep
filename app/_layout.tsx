@@ -33,7 +33,6 @@ const RootLayout = () => {
           screenOptions={{
             headerShown: false,
           }}>
-         
             <Stack.Screen name="(protected)" />
             <Stack.Screen name="(auth)" />
         </Stack>

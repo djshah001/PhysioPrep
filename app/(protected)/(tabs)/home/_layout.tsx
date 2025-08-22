@@ -17,15 +17,15 @@ const Header = () => {
         // tint="dark"
         // experimentalBlurMethod="dimezisBlurView"
         className="overflow-hidden">
-        <View className="px-4 py-3">
+        <View className="px-4 py-3 bg-white shadow-xl shadow-neutral-700">
           <View className="flex-row items-center justify-between">
             <Pressable onPress={() => router.push('/')} className="flex-row items-center space-x-2 gap-2">
-              <Ionicons name="book-outline" size={24} color={Colors.primary} />
+              <Ionicons name="logo-react" size={24} color={Colors.primary} />
               <Text className="text-2xl font-bold" style={{ color: Colors.primary }}>
                 PhysioPrep
               </Text>
             </Pressable>
-            <View className="flex-row items-center space-x-4">
+            <View className="flex-row items-center space-x-4 gap-2">
               <Pressable
                 onPress={() => router.push('/notifications')}
                 className="rounded-full bg-primary/10 p-2">
@@ -51,22 +51,12 @@ const HomeLayout = () => {
     <Stack
       screenOptions={{
         header: () => <Header />,
-        headerStyle: {
-          backgroundColor: Colors.grey6,
-        },
-        headerShadowVisible: false,
-        contentStyle: {
-          backgroundColor: Colors.background,
-          paddingTop: insets.top + 60, // Add extra padding for the header
-        },
+        headerShadowVisible: true,
       }}>
       <Stack.Screen
         name="index"
         options={{
           headerShown: true,
-          headerBlurEffect: 'regular',
-
-          headerTransparent: true,
           // headerBackground: () => (
           //   <BlurView
           //     intensity={40}

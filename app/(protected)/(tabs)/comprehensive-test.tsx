@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
-import { View, Text, ActivityIndicator, ScrollView} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { testApi } from 'services/api';
 import { Button } from 'components/ui/button';
 import AnswerOption from 'components/quiz/AnswerOption';
-import QuizReview from 'components/questions/QuizReview';
 import QuizHeader from 'components/quiz/QuizHeader';
 import JumpToQuestionModal from 'components/quiz/JumpToQuestionModal';
 import { SimpleSelect } from 'components/ui/SimpleSelect';
+
+import TestReview from 'components/test/TestReview';
+import { useAtom } from 'jotai';
+import { testStateAtom } from 'store/comprehensive-test-strore';
 
 export default function ComprehensiveTestPage() {
   const router = useRouter();
@@ -19,7 +22,8 @@ export default function ComprehensiveTestPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [result, setResult] = useState<any | null>(null);
-  const [duration, setDuration] = useState(60 * 60); // seconds, once started
+  const [timeLimitSec, setTimeLimitSec] = useState(60 * 60); // server provided
+  const [startTimeMs, setStartTimeMs] = useState<number | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showJumpModal, setShowJumpModal] = useState(false);
 
@@ -30,6 +34,14 @@ export default function ComprehensiveTestPage() {
     'mixed'
   );
   const [configuring, setConfiguring] = useState(true);
+
+  const [testState, setTestState] = useAtom(testStateAtom);
+
+  const getRemaining = () => {
+    if (!startTimeMs) return timeLimitSec;
+    const elapsed = Math.floor((Date.now() - startTimeMs) / 1000);
+    return Math.max(0, timeLimitSec - elapsed);
+  };
 
   const startTest = async () => {
     setLoading(true);
@@ -43,8 +55,19 @@ export default function ComprehensiveTestPage() {
       const data = res.data.data;
       setQuestions(data.questions);
       setAnswers(new Array(data.questions.length).fill(undefined));
-      setDuration(data.timeLimit);
+      setTimeLimitSec(data.timeLimit);
+      const now = Date.now();
+      setStartTimeMs(now);
       setSessionId(data.sessionId);
+      // persist
+      setTestState({
+        SID: data.sessionId,
+        Qs: data.questions,
+        ANS: new Array(data.questions.length).fill(null),
+        ST: String(now),
+        IDX: '0',
+        TL: String(data.timeLimit),
+      });
       setConfiguring(false);
     } catch (e: any) {
       setError(e?.response?.data?.errors?.[0]?.msg || 'Failed to start comprehensive test');
@@ -52,6 +75,33 @@ export default function ComprehensiveTestPage() {
       setLoading(false);
     }
   };
+  // Restore persisted session on mount
+  useEffect(() => {
+    try {
+      const { SID, Qs, ANS, ST, IDX, TL } = testState;
+      console.log('testState:', testState.Qs.length);
+      if (SID && Qs && ST && TL) {
+        setSessionId(SID);
+        setQuestions(Qs);
+        setAnswers(ANS ? ANS : new Array(Qs.length).fill(null));
+        setStartTimeMs(parseInt(ST, 10));
+        setTimeLimitSec(parseInt(TL, 10));
+        setCurrentIndex(IDX ? parseInt(IDX, 10) : 0);
+        setConfiguring(false);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist answers and index when they change
+  useEffect(() => {
+    setTestState((prev) => ({ ...prev, ANS: answers }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers]);
+  useEffect(() => {
+    setTestState((prev) => ({ ...prev, IDX: String(currentIndex) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex]);
 
   const handleSelect = (idx: number) => {
     const newAns = [...answers];
@@ -66,10 +116,11 @@ export default function ComprehensiveTestPage() {
       const payload = {
         sessionId,
         answers: answers.map((a, i) => ({ questionId: questions[i]._id, selectedAnswer: a })),
-        timeSpent: duration, // optional: real time could be tracked separately
+        timeSpent: timeLimitSec - getRemaining(),
       };
       const res = await testApi.submitComprehensive(payload);
       setResult(res.data.data);
+      // persist
       setShowReview(true);
     } catch (e: any) {
       // Render configuration UI before starting the test
@@ -77,6 +128,7 @@ export default function ComprehensiveTestPage() {
       setError(e?.response?.data?.errors?.[0]?.msg || 'Failed to submit test');
     } finally {
       setSubmitting(false);
+      setTestState({ SID: '', Qs: [], ANS: [], ST: '', IDX: '', TL: '' });
     }
   };
 
@@ -98,21 +150,32 @@ export default function ComprehensiveTestPage() {
   }
 
   if (showReview && result) {
-    // Use the shared QuizReview component for consistency
-    // Map server review (result.review) to QuizReview props
-    const reviewQuestions = result.review.map((r: any) => ({
-      question: r.question,
-      timeSpent: r.timeSpent,
+    const items = (result.review || []).map((r: any) => ({
+      question: {
+        _id: r.question._id,
+        text: r.question.text,
+        options: r.question.options,
+        explanationHtml: r.question.explanationHtml,
+      },
+      selectedAnswer: r.selectedAnswer,
+      correctAnswer: r.correctAnswer,
       isCorrect: r.isCorrect,
-      userAnswer: { selectedAnswer: r.selectedAnswer },
     }));
-
     return (
-      <QuizReview
-        reviewQuestions={reviewQuestions}
-        userAnswers={answers}
-        onBack={() => router.back()}
-        totalTime={duration}
+      <TestReview
+        score={result.score}
+        correct={result.correct}
+        totalQuestions={result.totalQuestions}
+        timeSpent={result.timeSpent}
+        items={items}
+        onBack={() => router.replace('/subjects')}
+        onRetake={() => {
+          setConfiguring(true);
+          setQuestions([]);
+          setAnswers([]);
+          setResult(null);
+          setShowReview(false);
+        }}
       />
     );
   }
@@ -173,15 +236,14 @@ export default function ComprehensiveTestPage() {
           </View>
         </ScrollView>
         <View className="p-4">
-          <Text className="mb-2 p-2 text-sm text-red-600">
-            Please review your settings before starting the test. Once started, the timer will begin
-            and you must complete all questions before time runs out.
+          <Text className="mb-2 p-2 text-sm text-neutral-600">
+            Review your settings, then start the test. The timer begins immediately.
           </Text>
           <Button
             title={loading ? 'Starting...' : 'Start Test'}
             onPress={startTest}
             disabled={loading}
-            className="rounded-xl bg-green-500 py-4 shadow-green-600 "
+            className="rounded-2xl bg-neutral-900 py-4 shadow-md"
             textClassName="text-white font-bold"
             rightIcon={'chevron-forward-outline'}
           />
@@ -199,8 +261,9 @@ export default function ComprehensiveTestPage() {
       <QuizHeader
         current={currentIndex}
         total={questions.length}
+        startTime={startTimeMs ?? null}
         elapsed={{ current: 0 } as any}
-        duration={duration}
+        duration={timeLimitSec}
         onExpire={handleSubmit}
         showTimeDisplay={false}
         showTimer={true}

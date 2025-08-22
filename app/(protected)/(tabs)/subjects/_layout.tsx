@@ -23,7 +23,7 @@ export default function SubjectsLayout() {
           
         }}
       />
-      <Stack.Screen
+      {/* <Stack.Screen
         name="comprehensive-test"
          options={{
           // headerShown: false,
@@ -37,7 +37,7 @@ export default function SubjectsLayout() {
           // headerBackground: () => <HeaderBlurView height={insets.top + 60} />,
           
         }}
-      />
+      /> */}
       <Stack.Screen
         name="[id]"
         options={{

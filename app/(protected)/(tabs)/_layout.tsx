@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs, usePathname } from 'expo-router';
 import colors from 'tailwindcss/colors';
 import Animated from 'react-native-reanimated';
+import { CustomHeader } from '~/common/CustomHeader';
 
 export default function TabsLayout() {
   const pathname = usePathname();
@@ -52,7 +53,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.white ,
+        tabBarActiveTintColor: colors.white,
         tabBarInactiveTintColor: colors.blue[400],
         tabBarShowLabel: false,
         tabBarIconStyle: {},
@@ -136,7 +137,7 @@ export default function TabsLayout() {
       //     fontWeight: '600',
       //   },
       // }}
-      >
+    >
       <Tabs.Screen
         name="home"
         options={{
@@ -165,11 +166,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="quiz"
+        name="comprehensive-test"
         options={{
-          title: 'Quiz',
+          title: 'Comprehensive Test',
+          header: () => <CustomHeader title="Comprehensive Test" showBack />,
+          headerShown: true,
           tabBarIcon: ({ color, size, focused }) => (
-            <CustomTabBar color={color} size={size} focused={focused} name="document-text" />
+            <CustomTabBar color={color} size={size} focused={focused} name="clipboard" />
           ),
         }}
       />

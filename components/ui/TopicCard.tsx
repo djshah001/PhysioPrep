@@ -8,7 +8,6 @@ interface TopicCardProps {
   subjectId: string;
   isAdmin?: boolean;
   onTakeQuiz: () => void;
-  onTakeTest: () => void;
   onViewDetails?: () => void;
 }
 
@@ -16,7 +15,6 @@ export const TopicCard: React.FC<TopicCardProps> = ({
   topic,
   isAdmin,
   onTakeQuiz,
-  onTakeTest,
   onViewDetails,
 }) => {
   // console.log(JSON.stringify(topic, null, 2));
