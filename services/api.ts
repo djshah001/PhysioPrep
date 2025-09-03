@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Topic, Subject, quizAnswerType } from 'types/types';
 
-const API_URL = 'http://10.39.61.172:5000/api';
+const API_URL = 'http://10.208.186.172:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -78,11 +78,16 @@ export const questionApi = {
 };
 
 export const testApi = {
-  startComprehensive: (data: { count: number; duration: number; difficulty?: 'easy' | 'medium' | 'hard' | 'mixed' }) =>
-    api.post('/tests/comprehensive/start', data),
-  submitComprehensive: (
-    data: { sessionId: string; answers: { questionId: string; selectedAnswer: number }[]; timeSpent?: number }
-  ) => api.post('/tests/comprehensive/submit', data),
+  startComprehensive: (data: {
+    count: number;
+    duration: number;
+    difficulty?: 'easy' | 'medium' | 'hard' | 'mixed';
+  }) => api.post('/tests/comprehensive/start', data),
+  submitComprehensive: (data: {
+    sessionId: string;
+    answers: { questionId: string; selectedAnswer: number }[];
+    timeSpent?: number;
+  }) => api.post('/tests/comprehensive/submit', data),
 };
 
 export default api;

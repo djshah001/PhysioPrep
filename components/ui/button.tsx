@@ -9,10 +9,10 @@ interface ButtonProps {
   className?: string;
   textClassName?: string;
   loading?: boolean;
-  leftIcon?: keyof typeof Ionicons.glyphMap | null;
+  leftIcon?: keyof typeof Ionicons.glyphMap | null | React.ReactElement;
   leftIconSize?: number;
   leftIconColor?: string;
-  rightIcon?: keyof typeof Ionicons.glyphMap | null;
+  rightIcon?: keyof typeof Ionicons.glyphMap | null | React.ReactElement;
   rightIconSize?: number;
   rightIconColor?: string;
 }
@@ -36,7 +36,7 @@ export function Button({
       onPress={onPress}
       disabled={disabled || loading}
       className={cn(
-        'flex-row items-center justify-center gap-1 rounded-xl bg-primary shadow-xl shadow-primary py-3 px-4',
+        'flex-row items-center justify-center gap-1 rounded-xl bg-primary px-4 py-3 shadow-xl shadow-primary',
         disabled ? 'opacity-50' : 'opacity-100',
         className
       )}>
@@ -44,12 +44,28 @@ export function Button({
         <ActivityIndicator color="white" />
       ) : (
         <>
-          {leftIcon && (
-            <Ionicons name={leftIcon} size={leftIconSize} color={leftIconColor} className="" />
+          {leftIcon && typeof leftIcon === 'string' ? (
+            <Ionicons
+              name={typeof leftIcon === 'string' ? leftIcon : 'chevron-forward-outline'}
+              size={leftIconSize}
+              color={leftIconColor}
+              className=""
+            />
+          ) : (
+            leftIcon
           )}
-          <Text className={cn('text-base font-semibold text-white leading-6 ', textClassName)}>{title}</Text>
-          {rightIcon && (
-            <Ionicons name={rightIcon} size={rightIconSize} color={rightIconColor} className="" />
+          <Text className={cn('text-base font-semibold leading-6 text-white ', textClassName)}>
+            {title}
+          </Text>
+          {rightIcon && typeof rightIcon === 'string' ? (
+            <Ionicons
+              name={typeof rightIcon === 'string' ? rightIcon : 'chevron-forward-outline'}
+              size={rightIconSize}
+              color={rightIconColor}
+              className=""
+            />
+          ) : (
+            rightIcon
           )}
         </>
       )}

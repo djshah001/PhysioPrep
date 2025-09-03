@@ -34,13 +34,13 @@ export const SubjectCard = ({ subject, index, isAdmin }: SubjectCardProps) => {
   // console.log(JSON.stringify(subject,null,2))
 
   return (
-    <Animated.View entering={FadeInRight.delay(index * 80).springify()} className="mb-5">
+    <Animated.View entering={FadeInRight.delay(index * 80).springify()} className="mb-4 ">
       <LinearGradient
         colors={[primaryColor + 'CC', secondaryColor + 'CC']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        className="relative overflow-hidden rounded-3xl p-5 shadow-md shadow-neutral-600/30">
-        <View className="flex-1">
+        className="relative overflow-hidden rounded-3xl p-5 ">
+        <View className="flex-1 shadow-md shadow-neutral-600">
           <View className="flex-row items-start justify-between">
             <Pressable
               onPress={() =>

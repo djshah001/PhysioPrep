@@ -108,12 +108,15 @@ export const fetchSubjectAtom = atom(
   async (get, set, subjectId: string, callApi: boolean) => {
     set(loadingAtom, true);
     set(errorAtom, null);
+    // console.log(get(subjectsAtom));
+    const subjects = get(subjectsAtom);
+    // console.log(subjects);
+
     try {
-      if (callApi) {
+      if (subjects.length === 0 || callApi) {
         const res = await subjectApi.getSubjectById(subjectId);
         set(subjectAtom, res.data.data);
       } else {
-        const subjects = get(subjectsAtom);
         set(subjectAtom, subjects.find((s) => s._id === subjectId) || null);
       }
     } catch (err: any) {

@@ -11,6 +11,10 @@ export default function ProtectedLayout() {
       }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="profile" />
+      <Stack.Screen name="subjects" />
+      {/* <Stack.Screen name="daily-question" /> */}
+      <Stack.Screen name="topics/[topicId]" />
+
     </Stack>
   );
 }

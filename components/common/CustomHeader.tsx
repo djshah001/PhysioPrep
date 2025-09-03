@@ -86,7 +86,7 @@ export function CustomHeader({
             </View>
           )}
 
-          <Text className="text-center text-3xl font-bold text-primary" numberOfLines={1}>
+          <Text className="text-center text-2xl font-bold text-primary" numberOfLines={1}>
             {title}
           </Text>
 

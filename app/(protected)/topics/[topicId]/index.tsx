@@ -58,12 +58,12 @@ export default function TopicDetailsPage() {
 
   const handleTakeQuiz = () => {
     if (!topic) return;
-    router.push(`/subjects/${subjectId}/topics/${topic._id}/quiz`);
+    router.push(`/topics/${topic._id}/quiz`);
   };
 
   const handleTakeTest = () => {
     if (!topic) return;
-    router.push(`/subjects/${subjectId}/topics/${topic._id}/test`);
+    router.push(`/topics/${topic._id}/test`);
   };
 
   const handleEdit = () => {

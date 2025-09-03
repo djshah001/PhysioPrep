@@ -30,7 +30,7 @@ export default function TabsLayout() {
   }) => {
     return (
       <Animated.View
-        className={`relative h-14 w-14 items-center justify-center ${focused ? 'bg-primary shadow-xl shadow-neutral-700' : ''} rounded-full`}>
+        className={`relative h-14 w-14 items-center justify-center ${focused ? 'bg-primary shadow-xl shadow-blue-700' : ''} rounded-full`}>
         {/* Background circle for active state */}
         {/* <Animated.View
           style={[
@@ -60,7 +60,7 @@ export default function TabsLayout() {
         animation: 'shift',
         tabBarStyle: {
           position: 'absolute',
-          bottom: Platform.OS === 'ios' ? 20 : 15,
+          bottom: Platform.OS === 'ios' ? 15 : 10,
           left: 20,
           right: 20,
           borderRadius: 50,
@@ -69,7 +69,7 @@ export default function TabsLayout() {
           // backgroundColor: Colors.primary,
           height: 65,
           display: isIndexScreen ? 'flex' : 'none',
-          paddingHorizontal: 15,
+          paddingHorizontal: 16,
           paddingTop: 4,
           borderWidth: 0,
           boxShadow: '0px 20px 40px rgba(20, 20, 20, 0.2)',
@@ -154,6 +154,8 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size, focused }) => (
             <CustomTabBar color={color} size={size} focused={focused} name="book" />
           ),
+          headerShown: true,
+          header: () => <CustomHeader title="Subjects" />,
         }}
       />
       <Tabs.Screen

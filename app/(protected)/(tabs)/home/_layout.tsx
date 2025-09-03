@@ -16,8 +16,8 @@ const Header = () => {
         // intensity={40}
         // tint="dark"
         // experimentalBlurMethod="dimezisBlurView"
-        className="overflow-hidden">
-        <View className="px-4 py-3 bg-white shadow-xl shadow-neutral-700">
+        className="">
+        <View className="px-4 py-3 bg-white shadow-xl shadow-slate-700">
           <View className="flex-row items-center justify-between">
             <Pressable onPress={() => router.push('/')} className="flex-row items-center space-x-2 gap-2">
               <Ionicons name="logo-react" size={24} color={Colors.primary} />

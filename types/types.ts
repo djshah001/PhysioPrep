@@ -90,12 +90,10 @@ export interface Quiz {
   mode: 'subject-quiz' | 'topic-quiz';
 }
 
-
-
 export interface Question {
   _id: string;
   text: string;
-  options: { text: string; isCorrect: boolean }[];
+  options: { _id?: string; text: string; isCorrect: boolean }[];
   explanation: string;
   difficulty: 'easy' | 'medium' | 'hard';
   tier: 'free' | 'premium';

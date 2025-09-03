@@ -1,6 +1,6 @@
 import { useAtom } from 'jotai';
 import { homeLoadingAtom } from 'lib/atoms/home';
-import { View } from 'react-native';
+import { StatusBar, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BentoHome from '~/home/BentoHome';
@@ -38,11 +38,8 @@ export default function HomePage() {
   //   );
   // }
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        // backgroundColor: '#0B0B0B'
-      }}>
+    <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
+      <StatusBar barStyle="dark-content" />
       <BentoHome />
     </SafeAreaView>
   );

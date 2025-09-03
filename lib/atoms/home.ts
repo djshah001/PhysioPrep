@@ -26,6 +26,8 @@ export type UserHomeStats = {
   averageTimePerQuestion: number;
   favoriteSubjects: FavoriteSubject[];
   recentActivity: RecentActivityItem[];
+  questionsSolvedPerSubject: any[];
+  totalQuestions: number;
 };
 
 export const homeStatsAtom = atom<UserHomeStats | null>(null);
