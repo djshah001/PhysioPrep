@@ -1,13 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import api from 'services/api';
-import { userAtom, tokenAtom, isLoadingAtom, isLoggedInAtom } from '../store/auth';
+import {
+  userAtom,
+  tokenAtom,
+  refreshTokenAtom,
+  isLoadingAtom,
+  isLoggedInAtom,
+} from '../store/auth';
 import { useAtom } from 'jotai';
 import { AxiosError } from 'axios';
+import { googleAuthService, GoogleAuthResult } from '../services/googleAuth';
 
 export const useAuth = () => {
   const [user, setUser] = useAtom(userAtom);
   const [token, setToken] = useAtom(tokenAtom);
+  const [refreshToken, setRefreshToken] = useAtom(refreshTokenAtom);
   const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
   const [isLoggedIn, setIsLoggedIn] = useAtom(isLoggedInAtom);
 
@@ -17,15 +25,21 @@ export const useAuth = () => {
       const storedToken = await AsyncStorage.getItem('token');
       const storedUser = await AsyncStorage.getItem('user');
       const storedLoginState = await AsyncStorage.getItem('isLoggedIn');
+      const storedRefreshToken = await AsyncStorage.getItem('refreshToken');
 
-      if (storedToken && storedUser && storedLoginState === 'true') {
+      const hasValidAuth =
+        storedToken && storedRefreshToken && storedUser && storedLoginState === 'true';
+
+      if (hasValidAuth) {
         console.log('Found stored authentication state'); // Debug log
 
         // Set the API authorization header
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
+        setRefreshToken(storedRefreshToken);
         setIsLoggedIn(true);
         api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        api.defaults.headers.common['RefreshToken'] = `Bearer ${storedRefreshToken}`;
         router.replace('/home'); // Redirect to home if logged in
       } else {
         // Clear any partial auth state
@@ -43,17 +57,20 @@ export const useAuth = () => {
     try {
       setIsLoading(true);
       const response = await api.post('/auth/login', { email, password });
-      const { token, user } = response.data.data;
+      const { token, user, refreshToken } = response.data.data;
 
       if (response.data.success) {
         await AsyncStorage.setItem('token', token);
+        await AsyncStorage.setItem('refreshToken', refreshToken);
         await AsyncStorage.setItem('user', JSON.stringify(user));
         await AsyncStorage.setItem('isLoggedIn', 'true');
 
         setToken(token);
+        setRefreshToken(refreshToken);
         setUser(user);
         setIsLoggedIn(true);
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        api.defaults.headers.common['RefreshToken'] = `Bearer ${refreshToken}`;
         router.replace('/home');
       } else {
         throw new Error(response.data.message || 'Login failed');
@@ -77,17 +94,19 @@ export const useAuth = () => {
         email,
         password,
       });
-      const { token, user } = response.data.data;
+      const { token, user, refreshToken } = response.data.data;
 
       if (response.data.success) {
         await AsyncStorage.setItem('token', token);
         await AsyncStorage.setItem('user', JSON.stringify(user));
         await AsyncStorage.setItem('isLoggedIn', 'true');
+        await AsyncStorage.setItem('refreshToken', refreshToken);
 
         setToken(token);
         setUser(user);
         setIsLoggedIn(true);
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        api.defaults.headers.common['RefreshToken'] = `Bearer ${refreshToken}`;
         router.replace('/home');
       } else {
         throw new Error(response.data.message || 'Registration failed');
@@ -110,7 +129,9 @@ export const useAuth = () => {
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('user');
       await AsyncStorage.removeItem('isLoggedIn');
+      await AsyncStorage.removeItem('refreshToken');
       delete api.defaults.headers.common['Authorization'];
+      delete api.defaults.headers.common['RefreshToken'];
       setToken(null);
       setUser(null);
       setIsLoggedIn(false);
@@ -149,9 +170,102 @@ export const useAuth = () => {
     }
   };
 
+  const googleSignIn = async (): Promise<GoogleAuthResult> => {
+    try {
+      setIsLoading(true);
+
+      // Initialize and start Google OAuth flow
+      const authResult = await googleAuthService.signIn();
+
+      if (!authResult.success || !authResult.idToken) {
+        return authResult;
+      }
+
+      // Send the ID token to our backend for verification
+      const response = await api.post('/auth/google', { token: authResult.idToken });
+      const { token, user, refreshToken } = response.data.data;
+
+      if (response.data.success) {
+        await AsyncStorage.setItem('token', token);
+        await AsyncStorage.setItem('refreshToken', refreshToken);
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+        await AsyncStorage.setItem('isLoggedIn', 'true');
+
+        setToken(token);
+        setRefreshToken(refreshToken);
+        setUser(user);
+        setIsLoggedIn(true);
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        api.defaults.headers.common['RefreshToken'] = `Bearer ${refreshToken}`;
+        router.replace('/home');
+
+        return { success: true };
+      } else {
+        throw new Error(response.data.message || 'Google authentication failed');
+      }
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      if (error instanceof AxiosError) {
+        const errorMessage =
+          error.response?.data?.errors?.[0]?.msg ||
+          error.response?.data?.message ||
+          'Google authentication failed';
+        return { success: false, error: errorMessage };
+      }
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const linkGoogleAccount = async (): Promise<GoogleAuthResult> => {
+    try {
+      setIsLoading(true);
+
+      // Initialize and start Google OAuth flow
+      const authResult = await googleAuthService.signIn();
+
+      if (!authResult.success || !authResult.idToken) {
+        return authResult;
+      }
+
+      // Send the ID token to our backend for linking
+      const response = await api.post('/auth/google/link', { token: authResult.idToken });
+      const updatedUser = response.data.data.user;
+
+      if (response.data.success) {
+        await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+
+        return { success: true };
+      } else {
+        throw new Error(response.data.message || 'Failed to link Google account');
+      }
+    } catch (error) {
+      console.error('Link Google account error:', error);
+      if (error instanceof AxiosError) {
+        const errorMessage =
+          error.response?.data?.errors?.[0]?.msg ||
+          error.response?.data?.message ||
+          'Failed to link Google account';
+        return { success: false, error: errorMessage };
+      }
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     user,
     token,
+    refreshToken,
     isLoading,
     isLoggedIn,
     login,
@@ -159,5 +273,7 @@ export const useAuth = () => {
     logout,
     updateUser,
     loadStoredAuth,
+    googleSignIn,
+    linkGoogleAccount,
   };
 };

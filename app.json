@@ -11,7 +11,8 @@
       "tsconfigPaths": true
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-web-browser"
     ],
     "orientation": "portrait",
     "scheme": "physioprep",

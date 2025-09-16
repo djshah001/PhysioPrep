@@ -16,9 +16,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { Button } from 'components/ui/button';
 import { Input } from 'components/ui/input';
 import { Colors } from 'constants/Colors';
+import { GoogleSignInButton, AuthDivider } from '../../components/auth/GoogleSignInButton';
 import Animated, {
   FadeInDown,
-  useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
@@ -68,12 +68,6 @@ export default function LoginScreen() {
     }
   };
 
-  const buttonAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
-
   return (
     <LinearGradient
       // colors={[ colors.emerald[200],colors.amber[100]]}
@@ -91,7 +85,7 @@ export default function LoginScreen() {
           <View className="flex-1 justify-around gap-2 px-6 py-12">
             <Animated.View entering={FadeInDown.delay(200).springify()} className="">
               <Text className="mb-4 text-5xl font-extrabold text-black shadow-xl shadow-purple-500 ">
-                Physioprep
+                PhysioPrep
               </Text>
               <Text className="text-3xl font-bold text-neutral-800">Welcome Back</Text>
               <Text className="text-base leading-5 text-purple-300">
@@ -108,7 +102,9 @@ export default function LoginScreen() {
             ) : null}
 
             <View className="gap-6">
-              <Animated.View entering={FadeInDown.delay(600).springify()} className="gap-2">
+              
+
+              <Animated.View entering={FadeInDown.delay(500).springify()} className="gap-2">
                 <Input
                   label="Email"
                   placeholder="Enter your email"
@@ -120,7 +116,7 @@ export default function LoginScreen() {
                 />
               </Animated.View>
 
-              <Animated.View entering={FadeInDown.delay(800).springify()} className="">
+              <Animated.View entering={FadeInDown.delay(600).springify()} className="">
                 <View className="relative">
                   <Input
                     label="Password"
@@ -147,19 +143,33 @@ export default function LoginScreen() {
                 </View>
               </Animated.View>
 
-              <Animated.View entering={FadeInDown.delay(1000).springify()} className="">
-                <Animated.View style={buttonAnimatedStyle}>
-                  <Button
-                    title={isLoading ? 'Signing in...' : 'Sign In'}
-                    onPress={handleLogin}
-                    disabled={isLoading}
-                    className=" bg-primary/90 py-4"
-                  />
-                </Animated.View>
+              <Animated.View entering={FadeInDown.delay(700).springify()}>
+                <Button
+                  title={isLoading ? 'Signing in...' : 'Sign In'}
+                  onPress={handleLogin}
+                  disabled={isLoading}
+                  className=" rounded-2xl bg-primary/90 py-4"
+                />
               </Animated.View>
 
+               {/* Divider */}
+              <Animated.View entering={FadeInDown.delay(800).springify()}>
+                <AuthDivider />
+              </Animated.View>
+
+              {/* Google Sign-In Button */}
+              <Animated.View entering={FadeInDown.delay(900).springify()}>
+                <GoogleSignInButton
+                  mode="signin"
+                  onError={(error) => setError(error)}
+                  disabled={isLoading}
+                />
+              </Animated.View>
+
+             
+
               <Animated.View
-                entering={FadeInDown.delay(1400).springify()}
+                entering={FadeInDown.delay(1000).springify()}
                 className="mt-8 flex-row justify-center text-center">
                 <Text className="text-center text-base text-neutral-700">
                   Don&apos;t have an account?{'  '}

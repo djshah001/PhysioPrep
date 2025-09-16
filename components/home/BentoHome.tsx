@@ -108,10 +108,10 @@ export default function BentoHome() {
           <Text className="text-md font-bold text-slate-400">Favorite Subjects</Text>
         </View>
         <View className="flex-row flex-wrap gap-3">
-          {stats?.favoriteSubjects?.map((s) => (
+          {stats?.favoriteSubjects?.slice(0, 4).map((s) => (
             <View
               key={s.id}
-              className="flex-1 flex-row items-center gap-2 rounded-2xl bg-white p-4 shadow-md shadow-slate-600">
+              className="w-[48%] flex-row items-center gap-2 rounded-2xl bg-white p-4 shadow-md shadow-slate-600">
               <Text className="rounded-full bg-rose-500 px-3.5 py-2 text-white">{s.name[0]}</Text>
               <Text className="text-lg font-bold text-slate-700">{s.name}</Text>
               {/* <Text className="text-sm text-white">

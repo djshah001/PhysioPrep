@@ -159,6 +159,23 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   token: string;
+  refreshToken: string;
+  user: User;
+}
+
+// Google OAuth Types
+export interface GoogleAuthRequest {
+  token: string;
+}
+
+export type GoogleAuthResponse = AuthResponse;
+
+export interface GoogleLinkRequest {
+  token: string;
+}
+
+export interface GoogleLinkResponse {
+  message: string;
   user: User;
 }
 
@@ -175,6 +192,7 @@ export interface User {
   stats: UserStats;
   avatar: string | null;
   premiumExpiry: string | null;
+  provider?: 'local' | 'google';
   createdAt: string;
   updatedAt: string;
 }

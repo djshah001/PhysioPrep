@@ -4,6 +4,8 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import { Subject } from 'types/types';
 
 import { router } from 'expo-router';
+import { ProgressBar } from '~/ProgressBar';
+import colors from 'tailwindcss/colors';
 
 interface SubjectCardProps {
   subject: Subject;
@@ -36,7 +38,7 @@ export const SubjectCard = ({ subject, index, isAdmin }: SubjectCardProps) => {
   return (
     <Animated.View entering={FadeInRight.delay(index * 80).springify()} className="mb-4 ">
       <LinearGradient
-        colors={[primaryColor + 'CC', secondaryColor + 'CC']}
+        colors={[primaryColor, secondaryColor]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         className="relative overflow-hidden rounded-3xl p-5 ">
@@ -57,8 +59,29 @@ export const SubjectCard = ({ subject, index, isAdmin }: SubjectCardProps) => {
                 <Text className="text-xl font-extrabold text-white" numberOfLines={1}>
                   {name}
                 </Text>
-                <Text className="mt-1 text-sm text-white/80">Total Questions: {stats?.totalQuestions ?? 0}</Text>
-                <Text className="mt-0.5 text-sm text-white/80">Correct: {userStats?.correctlyAnsweredQuestions ?? 0}</Text>
+                <View className="">
+                  <View className="mb-1 flex-row items-center justify-between gap-2">
+                    {/* <Text className=" text-xs text-white "> Progress</Text> */}
+                    <ProgressBar
+                      value={
+                        stats.totalQuestions === 0
+                          ? 0
+                          : (userStats.correctlyAnsweredQuestions / stats.totalQuestions) * 100
+                      }
+                      color={colors.indigo[500]}
+                      className="flex-1"
+                    />
+                    <Text className=" text-sm text-white ">
+                      {stats.totalQuestions === 0
+                        ? 0
+                        : (
+                            (userStats.correctlyAnsweredQuestions / stats.totalQuestions) *
+                            100
+                          ).toFixed(0)}
+                      %
+                    </Text>
+                  </View>
+                </View>
               </View>
             </Pressable>
           </View>

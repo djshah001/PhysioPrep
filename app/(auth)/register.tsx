@@ -14,6 +14,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Colors } from '../../constants/Colors';
+import { GoogleSignInButton, AuthDivider } from '../../components/auth/GoogleSignInButton';
 import Animated, {
   FadeInDown,
   useAnimatedStyle,
@@ -89,7 +90,21 @@ export default function RegisterScreen() {
               ) : null}
 
               <View className="">
-                <Animated.View entering={FadeInDown.delay(600).springify()} className="gap-2">
+                {/* Google Sign-In Button */}
+                <Animated.View entering={FadeInDown.delay(600).springify()}>
+                  <GoogleSignInButton
+                    mode="signup"
+                    onError={(error) => setError(error)}
+                    disabled={isLoading}
+                  />
+                </Animated.View>
+
+                {/* Divider */}
+                <Animated.View entering={FadeInDown.delay(700).springify()}>
+                  <AuthDivider />
+                </Animated.View>
+
+                <Animated.View entering={FadeInDown.delay(800).springify()} className="gap-2">
                   <Input
                     label="Full Name"
                     placeholder="Enter your full name"
@@ -99,7 +114,7 @@ export default function RegisterScreen() {
                   />
                 </Animated.View>
 
-                <Animated.View entering={FadeInDown.delay(800).springify()} className="gap-2">
+                <Animated.View entering={FadeInDown.delay(900).springify()} className="gap-2">
                   <Input
                     label="Email"
                     placeholder="Enter your email"
@@ -134,7 +149,7 @@ export default function RegisterScreen() {
                   </View>
                 </Animated.View>
 
-                <Animated.View entering={FadeInDown.delay(1200).springify()} className="gap-2">
+                <Animated.View entering={FadeInDown.delay(1100).springify()} className="gap-2">
                   <View className="relative">
                     <Input
                       label="Confirm Password"
@@ -157,7 +172,7 @@ export default function RegisterScreen() {
                 </Animated.View>
 
                 <Animated.View
-                  entering={FadeInDown.delay(1400).springify()}
+                  entering={FadeInDown.delay(1200).springify()}
                   // style={buttonAnimatedStyle}
                   className="mt-8">
                   <Animated.View style={buttonAnimatedStyle}>

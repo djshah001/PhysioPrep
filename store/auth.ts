@@ -30,6 +30,7 @@ export interface User {
   stats: UserStats;
   avatar: string | null;
   premiumExpiry: string | null;
+  provider?: 'local' | 'google';
   createdAt: string;
   updatedAt: string;
 }
@@ -37,6 +38,7 @@ export interface User {
 // Atoms
 export const userAtom = atomWithStorage<User|null>("User",null);
 export const tokenAtom = atomWithStorage<string|null>("token","");
+export const refreshTokenAtom = atomWithStorage<string|null>("refreshToken","");
 export const isLoggedInAtom = atomWithStorage<boolean>("isLoggedIn",false);
 export const isLoadingAtom = atomWithStorage<boolean>("isLoading",false);
 

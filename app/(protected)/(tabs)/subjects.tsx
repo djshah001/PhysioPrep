@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, ScrollView, RefreshControl, Text, TextInput } from 'react-native';
 import { useAuth } from 'hooks/useAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from 'constants/Colors';
 import { SubjectCard } from 'components/subject/SubjectCard';
 import { EmptySubject } from 'components/subject/EmptySubject';
 import { useAtom, useSetAtom } from 'jotai';
 import { subjectsAtom, loadingAtom, errorAtom, fetchSubjectsAtom } from 'store/subject';
+import colors from 'tailwindcss/colors';
 
 export default function SubjectsPage() {
   const { user } = useAuth();
@@ -39,7 +39,7 @@ export default function SubjectsPage() {
     return (
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <View className="mx-4 mt-4 animate-pulse rounded-2xl">
-          <View className="h-12 w-full bg-white rounded-3xl shadow-lg " />
+          <View className="h-12 w-full rounded-3xl bg-white shadow-lg " />
         </View>
         <ScrollView contentContainerClassName="flex-1 p-6 flex-row flex-wrap">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
@@ -56,7 +56,17 @@ export default function SubjectsPage() {
   if (error) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-background" edges={['bottom']}>
-        <Text className="text-red-500">{error}</Text>
+        <ScrollView
+          contentContainerClassName="flex-1"
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={onRefresh}
+              tintColor={colors.blue[500]}
+            />
+          }>
+          <Text className="text-red-500">{error}</Text>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -68,7 +78,11 @@ export default function SubjectsPage() {
           className="p-6"
           contentContainerClassName="items-center justify-center flex-1"
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={Colors.primary} />
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={onRefresh}
+              tintColor={colors.blue[500]}
+            />
           }>
           <EmptySubject type="subject" isAdmin={user?.role === 'admin'} href="/subjects/add" />
         </ScrollView>
@@ -81,7 +95,7 @@ export default function SubjectsPage() {
       <ScrollView
         className="flex-1 p-6 py-6"
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={Colors.primary} />
+          <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={colors.blue[500]} />
         }>
         <View className="mb-6">
           <View className="mb-3">
@@ -90,7 +104,7 @@ export default function SubjectsPage() {
               onChangeText={setQuery}
               placeholder="Search subjects"
               placeholderTextColor="#9CA3AF"
-              className="h-13 rounded-3xl bg-white px-4 text-base border border-neutral-400 text-neutral-800 shadow-lg"
+              className="h-13 rounded-3xl border border-neutral-400 bg-white px-4 text-base text-neutral-800 shadow-lg"
               accessibilityLabel="Search subjects"
             />
           </View>
@@ -110,7 +124,7 @@ export default function SubjectsPage() {
               </View>
             ))
           ) : (
-            <View className="w-full items-center mt-8">
+            <View className="mt-8 w-full items-center">
               <Text className="text-muted">No subjects match your search.</Text>
             </View>
           )}
