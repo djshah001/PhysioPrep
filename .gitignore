@@ -23,3 +23,5 @@ android
 .metro-health-check*
 package-lock.json
 .env.example
+.env
+package-lock.json

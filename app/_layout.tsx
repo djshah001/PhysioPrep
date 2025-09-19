@@ -4,14 +4,13 @@ import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '../global.css';
 import { MenuProvider } from 'react-native-popup-menu';
+import { configureGoogleSignIn } from '../services/googleAuth';
 
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 const RootLayout = () => {
- 
-
   const [loaded, error] = useFonts({
     // Add your fonts here if needed
   });
@@ -19,6 +18,11 @@ const RootLayout = () => {
   useEffect(() => {
     if (error) throw error;
   }, [error]);
+
+  useEffect(() => {
+    // Configure Google Sign-In when the app starts
+    configureGoogleSignIn();
+  }, []);
 
   if (!loaded) {
     return null;

@@ -10,7 +10,7 @@ import {
 } from '../store/auth';
 import { useAtom } from 'jotai';
 import { AxiosError } from 'axios';
-import { googleAuthService, GoogleAuthResult } from '../services/googleAuth';
+import { GoogleAuthResult, signInWithGoogle, configureGoogleSignIn } from '../services/googleAuth';
 
 export const useAuth = () => {
   const [user, setUser] = useAtom(userAtom);
@@ -171,18 +171,22 @@ export const useAuth = () => {
   };
 
   const googleSignIn = async (): Promise<GoogleAuthResult> => {
+    console.log('Google sign-in initiated...'); // Debug log
     try {
       setIsLoading(true);
 
-      // Initialize and start Google OAuth flow
-      const authResult = await googleAuthService.signIn();
+      // Configure Google Sign-In
+      configureGoogleSignIn();
 
-      if (!authResult.success || !authResult.idToken) {
-        return authResult;
+      // Sign in with Google
+      const googleResult = await signInWithGoogle();
+
+      if (!googleResult.success || !googleResult.idToken) {
+        return googleResult;
       }
 
       // Send the ID token to our backend for verification
-      const response = await api.post('/auth/google', { token: authResult.idToken });
+      const response = await api.post('/auth/google', { token: googleResult.idToken });
       const { token, user, refreshToken } = response.data.data;
 
       if (response.data.success) {
@@ -225,15 +229,18 @@ export const useAuth = () => {
     try {
       setIsLoading(true);
 
-      // Initialize and start Google OAuth flow
-      const authResult = await googleAuthService.signIn();
+      // Configure Google Sign-In
+      configureGoogleSignIn();
 
-      if (!authResult.success || !authResult.idToken) {
-        return authResult;
+      // Sign in with Google
+      const googleResult = await signInWithGoogle();
+
+      if (!googleResult.success || !googleResult.idToken) {
+        return googleResult;
       }
 
       // Send the ID token to our backend for linking
-      const response = await api.post('/auth/google/link', { token: authResult.idToken });
+      const response = await api.post('/auth/google/link', { token: googleResult.idToken });
       const updatedUser = response.data.data.user;
 
       if (response.data.success) {

@@ -5,24 +5,20 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-na
 import { useAuth } from '../../hooks/useAuth';
 import { isGoogleAuthConfigured } from '../../services/googleAuth';
 
-interface GoogleSignInButtonProps {
-  mode?: 'signin' | 'signup';
+interface GoogleLinkButtonProps {
   onSuccess?: () => void;
   onError?: (error: string) => void;
   disabled?: boolean;
 }
 
-export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
-  mode = 'signin',
+export const GoogleLinkButton: React.FC<GoogleLinkButtonProps> = ({
   onSuccess,
   onError,
   disabled = false,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { googleSignIn } = useAuth();
+  const { linkGoogleAccount } = useAuth();
   const scale = useSharedValue(1);
-
-  const buttonText = mode === 'signin' ? 'Continue with Google' : 'Sign up with Google';
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -30,7 +26,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     };
   });
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleLink = async () => {
     if (!isGoogleAuthConfigured()) {
       Alert.alert(
         'Configuration Error',
@@ -43,14 +39,15 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
       scale.value = withSpring(0.95);
       setIsLoading(true);
 
-      const result = await googleSignIn();
+      const result = await linkGoogleAccount();
 
       if (result.success) {
         onSuccess?.();
+        Alert.alert('Success', 'Google account linked successfully!');
       } else {
-        const errorMessage = result.error || 'Google sign-in failed';
+        const errorMessage = result.error || 'Failed to link Google account';
         onError?.(errorMessage);
-        Alert.alert('Sign-In Failed', errorMessage);
+        Alert.alert('Link Failed', errorMessage);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
@@ -69,7 +66,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   return (
     <Animated.View style={animatedStyle}>
       <TouchableOpacity
-        onPress={handleGoogleSignIn}
+        onPress={handleGoogleLink}
         disabled={disabled || isLoading}
         className={`
           flex-row items-center justify-center rounded-2xl border-2 border-white/20 
@@ -81,22 +78,11 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
           <Ionicons name="logo-google" size={24} color="#4285F4" />
         </View>
         <Text className="text-center text-base font-semibold text-neutral-800">
-          {isLoading ? 'Signing in...' : buttonText}
+          {isLoading ? 'Linking...' : 'Link Google Account'}
         </Text>
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
-// Auth Divider Component
-export const AuthDivider: React.FC = () => {
-  return (
-    <View className="my-6 flex-row items-center">
-      <View className="h-px flex-1 bg-white/20" />
-      <Text className="mx-4 text-sm text-white/60">or</Text>
-      <View className="h-px flex-1 bg-white/20" />
-    </View>
-  );
-};
-
-export default GoogleSignInButton;
+export default GoogleLinkButton;

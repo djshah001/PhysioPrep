@@ -1,28 +1,30 @@
-import * as AuthSession from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
-import * as Crypto from 'expo-crypto';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
-
-// Complete the auth session for web browsers
-WebBrowser.maybeCompleteAuthSession();
 
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '118411292895-cu78fath7rnfmf8lmp66pmpmko78fe0j.apps.googleusercontent.com';
-const GOOGLE_CLIENT_ID_WEB = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || '';
+const GOOGLE_CLIENT_ID_WEB = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || '118411292895-cu78fath7rnfmf8lmp66pmpmko78fe0j.apps.googleusercontent.com';
 
 // Get the appropriate client ID based on platform
-const getClientId = () => {
+export const getClientId = () => {
   if (Platform.OS === 'web') {
     return GOOGLE_CLIENT_ID_WEB;
   }
   return GOOGLE_CLIENT_ID;
 };
 
-// OAuth discovery document
-const discovery = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+// Configure Google Sign-In
+export const configureGoogleSignIn = () => {
+  GoogleSignin.configure({
+    webClientId: getClientId(), // server client ID of type WEB for your server
+    offlineAccess: true, // if you want to access Google API on behalf of the user FROM YOUR SERVER
+    hostedDomain: '', // specifies a hosted domain restriction
+    forceCodeForRefreshToken: true, // [Android] related to `serverAuthCode`, read the docs link below *.
+    accountName: '', // [Android] specifies an account name on the device that should be used
+    iosClientId: GOOGLE_CLIENT_ID, // [iOS] if you want to specify the client ID of type iOS (otherwise, it is taken from GoogleService-Info.plist)
+    googleServicePlistPath: '', // [iOS] if you renamed your GoogleService-Info.plist you'll need to add this line.
+    profileImageSize: 120, // [iOS] The desired height (and width) of the profile image. Defaults to 120px
+  });
 };
 
 export interface GoogleAuthResult {
@@ -32,131 +34,93 @@ export interface GoogleAuthResult {
   error?: string;
 }
 
-export class GoogleAuthService {
-  private static instance: GoogleAuthService;
-  private request: AuthSession.AuthRequest | null = null;
-
-  private constructor() {}
-
-  public static getInstance(): GoogleAuthService {
-    if (!GoogleAuthService.instance) {
-      GoogleAuthService.instance = new GoogleAuthService();
-    }
-    return GoogleAuthService.instance;
+// Check if Google Play Services are available
+export const checkGooglePlayServices = async (): Promise<boolean> => {
+  try {
+    await GoogleSignin.hasPlayServices();
+    return true;
+  } catch (error) {
+    console.error('Google Play Services not available:', error);
+    return false;
   }
+};
 
-  /**
-   * Initialize the Google OAuth request
-   */
-  public async initializeRequest(): Promise<void> {
-    try {
-      const clientId = getClientId();
-      
-      if (!clientId) {
-        throw new Error('Google Client ID not configured');
-      }
-
-      // Generate code verifier for PKCE
-      const codeVerifier = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
-        { encoding: Crypto.CryptoEncoding.BASE64 }
-      );
-
-      this.request = new AuthSession.AuthRequest({
-        clientId,
-        scopes: ['openid', 'profile', 'email'],
-        responseType: AuthSession.ResponseType.IdToken,
-        redirectUri: AuthSession.makeRedirectUri({
-          scheme: 'physioprep',
-          path: 'auth',
-        }),
-        extraParams: {
-          // Add any additional parameters if needed
-        },
-        prompt: AuthSession.Prompt.SelectAccount,
-      });
-    } catch (error) {
-      console.error('Error initializing Google OAuth request:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Start the Google OAuth flow
-   */
-  public async signIn(): Promise<GoogleAuthResult> {
-    try {
-      if (!this.request) {
-        await this.initializeRequest();
-      }
-
-      if (!this.request) {
-        throw new Error('Failed to initialize OAuth request');
-      }
-
-      const result = await this.request.promptAsync(discovery);
-
-      if (result.type === 'success') {
-        const { id_token, access_token } = result.params;
-        
-        if (!id_token) {
-          throw new Error('No ID token received from Google');
-        }
-
-        return {
-          success: true,
-          idToken: id_token,
-          accessToken: access_token,
-        };
-      } else if (result.type === 'cancel') {
-        return {
-          success: false,
-          error: 'User cancelled the authentication',
-        };
-      } else {
-        return {
-          success: false,
-          error: 'Authentication failed',
-        };
-      }
-    } catch (error) {
-      console.error('Google sign-in error:', error);
+// Sign in with Google
+export const signInWithGoogle = async (): Promise<GoogleAuthResult> => {
+  try {
+    // Check if Google Play Services are available
+    const hasPlayServices = await checkGooglePlayServices();
+    if (!hasPlayServices) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error: 'Google Play Services not available',
+      };
+    }
+
+    // Sign in
+    const userInfo = await GoogleSignin.signIn();
+
+    // Get the ID token from the user info
+    const idToken = userInfo.data?.idToken;
+
+    if (idToken) {
+      return {
+        success: true,
+        idToken: idToken,
+        accessToken: userInfo.data?.serverAuthCode || undefined,
+      };
+    } else {
+      return {
+        success: false,
+        error: 'No ID token received from Google',
+      };
+    }
+  } catch (error: any) {
+    console.error('Google sign-in error:', error);
+
+    if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+      return {
+        success: false,
+        error: 'User cancelled the sign-in',
+      };
+    } else if (error.code === statusCodes.IN_PROGRESS) {
+      return {
+        success: false,
+        error: 'Sign-in is already in progress',
+      };
+    } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      return {
+        success: false,
+        error: 'Google Play Services not available',
+      };
+    } else {
+      return {
+        success: false,
+        error: error.message || 'Google sign-in failed',
       };
     }
   }
+};
 
-  /**
-   * Sign out (revoke tokens if needed)
-   */
-  public async signOut(): Promise<void> {
-    try {
-      // Reset the request
-      this.request = null;
-      
-      // Note: Token revocation would typically be handled by the backend
-      // when the user logs out from the app
-    } catch (error) {
-      console.error('Google sign-out error:', error);
-    }
+// Sign out from Google
+export const signOutFromGoogle = async (): Promise<void> => {
+  try {
+    await GoogleSignin.signOut();
+  } catch (error) {
+    console.error('Google sign-out error:', error);
   }
+};
 
-  /**
-   * Get the redirect URI for the current platform
-   */
-  public getRedirectUri(): string {
-    return AuthSession.makeRedirectUri({
-      scheme: 'physioprep',
-      path: 'auth',
-    });
+// Check if user is signed in
+export const isSignedIn = (): boolean => {
+  try {
+    const currentUser = GoogleSignin.getCurrentUser();
+    return !!currentUser;
+  } catch (error) {
+    console.error('Error checking Google sign-in status:', error);
+    return false;
   }
-}
-
-// Export singleton instance
-export const googleAuthService = GoogleAuthService.getInstance();
+};
 
 // Utility functions
 export const isGoogleAuthConfigured = (): boolean => {
