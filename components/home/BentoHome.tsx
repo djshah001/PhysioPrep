@@ -42,8 +42,17 @@ export default function BentoHome() {
 
   return (
     <ScrollView className="flex-1 bg-background p-4">
-      {/* Bento Grid */}
-      <View className="flex-1 flex-row gap-2">
+      {loading && (
+        <View className="p-4">
+          <View className="mb-4 h-36 animate-pulse rounded-3xl bg-card/50" />
+          <View className="mb-4 h-28 animate-pulse rounded-3xl bg-card/50" />
+          <View className="mb-4 h-20 animate-pulse rounded-2xl bg-card/50" />
+        </View>
+      )}
+      {!loading && (
+        <>
+          {/* Bento Grid */}
+          <View className="flex-1 flex-row gap-2">
         {/* Left: Primary metric */}
         <Animated.View entering={FadeInDown.delay(50).springify()} className="flex-1">
           <View className="flex-1 justify-center gap-2 rounded-3xl bg-blue-500 p-5 shadow-lg shadow-slate-600">
@@ -92,7 +101,9 @@ export default function BentoHome() {
             />
           </Animated.View>
         </View>
-      </View>
+          </View>
+        </>
+      )}
 
       {/* Embedded Daily Question inside Home */}
       {dqVisible && (

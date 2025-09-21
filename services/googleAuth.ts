@@ -4,26 +4,38 @@ import { Platform } from 'react-native';
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '118411292895-cu78fath7rnfmf8lmp66pmpmko78fe0j.apps.googleusercontent.com';
 const GOOGLE_CLIENT_ID_WEB = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || '118411292895-cu78fath7rnfmf8lmp66pmpmko78fe0j.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID_ANDROID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || '118411292895-h8mpnda4kqnvno31uls6pa9eao7qqk05.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID_IOS = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || '118411292895-cu78fath7rnfmf8lmp66pmpmko78fe0j.apps.googleusercontent.com';
 
 // Get the appropriate client ID based on platform
 export const getClientId = () => {
   if (Platform.OS === 'web') {
     return GOOGLE_CLIENT_ID_WEB;
   }
+
+  if (Platform.OS === 'android') {
+    return GOOGLE_CLIENT_ID_ANDROID;
+  }
+  if (Platform.OS === 'ios') {
+    return GOOGLE_CLIENT_ID_IOS;
+  }
+
   return GOOGLE_CLIENT_ID;
 };
 
 // Configure Google Sign-In
 export const configureGoogleSignIn = () => {
   GoogleSignin.configure({
-    webClientId: getClientId(), // server client ID of type WEB for your server
+    webClientId: '118411292895-cu78fath7rnfmf8lmp66pmpmko78fe0j.apps.googleusercontent.com', // server client ID of type WEB for your server,
     offlineAccess: true, // if you want to access Google API on behalf of the user FROM YOUR SERVER
     hostedDomain: '', // specifies a hosted domain restriction
-    forceCodeForRefreshToken: true, // [Android] related to `serverAuthCode`, read the docs link below *.
-    accountName: '', // [Android] specifies an account name on the device that should be used
-    iosClientId: GOOGLE_CLIENT_ID, // [iOS] if you want to specify the client ID of type iOS (otherwise, it is taken from GoogleService-Info.plist)
-    googleServicePlistPath: '', // [iOS] if you renamed your GoogleService-Info.plist you'll need to add this line.
-    profileImageSize: 120, // [iOS] The desired height (and width) of the profile image. Defaults to 120px
+    
+    // forceCodeForRefreshToken: true, // [Android] related to `serverAuthCode`, read the docs link below *.
+    // accountName: '', // [Android] specifies an account name on the device that should be used
+    // iosClientId: GOOGLE_CLIENT_ID, // [iOS] if you want to specify the client ID of type iOS (otherwise, it is taken from GoogleService-Info.plist)
+    // googleServicePlistPath: '', // [iOS] if you renamed your GoogleService-Info.plist you'll need to add this line.
+    // profileImageSize: 120, // [iOS] The desired height (and width) of the profile image. Defaults to 120px
+    // scopes: ['email', 'profile'], // [Android] add any scopes you want to request from the user
   });
 };
 
@@ -59,6 +71,7 @@ export const signInWithGoogle = async (): Promise<GoogleAuthResult> => {
 
     // Sign in
     const userInfo = await GoogleSignin.signIn();
+    // console.log('Google sign-in userInfo:', JSON.stringify(userInfo, null, 2));
 
     // Get the ID token from the user info
     const idToken = userInfo.data?.idToken;

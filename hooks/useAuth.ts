@@ -10,7 +10,7 @@ import {
 } from '../store/auth';
 import { useAtom } from 'jotai';
 import { AxiosError } from 'axios';
-import { GoogleAuthResult, signInWithGoogle, configureGoogleSignIn } from '../services/googleAuth';
+import { GoogleAuthResult, signInWithGoogle, configureGoogleSignIn, signOutFromGoogle } from '../services/googleAuth';
 
 export const useAuth = () => {
   const [user, setUser] = useAtom(userAtom);
@@ -73,6 +73,7 @@ export const useAuth = () => {
         api.defaults.headers.common['RefreshToken'] = `Bearer ${refreshToken}`;
         router.replace('/home');
       } else {
+        await signOutFromGoogle();
         throw new Error(response.data.message || 'Login failed');
       }
     } catch (error) {
@@ -136,6 +137,7 @@ export const useAuth = () => {
       setUser(null);
       setIsLoggedIn(false);
       router.replace('/(auth)/login');
+      await signOutFromGoogle();
     } catch (error) {
       console.error('Logout error:', error);
       // Even if there's an error, try to clear the state
@@ -187,6 +189,7 @@ export const useAuth = () => {
 
       // Send the ID token to our backend for verification
       const response = await api.post('/auth/google', { token: googleResult.idToken });
+      // console.log('Google sign-in response:', response.data); // Debug log
       const { token, user, refreshToken } = response.data.data;
 
       if (response.data.success) {
@@ -210,6 +213,7 @@ export const useAuth = () => {
     } catch (error) {
       console.error('Google sign-in error:', error);
       if (error instanceof AxiosError) {
+        await signOutFromGoogle();
         const errorMessage =
           error.response?.data?.errors?.[0]?.msg ||
           error.response?.data?.message ||

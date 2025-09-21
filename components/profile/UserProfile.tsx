@@ -1,26 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, RefreshControl, ActivityIndicator, Image, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Alert,
+  RefreshControl,
+  Image,
+} from 'react-native';
+import { Button } from '../ui/button';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ProfileSkeleton } from '../../components/skeletons/ProfileSkeleton';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeInDown,
-  FadeInRight,
   FadeInUp,
-  SlideInRight,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
-  interpolate,
-  Extrapolate
 } from 'react-native-reanimated';
 import { useAuth } from '../../hooks/useAuth';
 import { useUser } from '../../store/auth';
 import api from '../../services/api';
-
-const { width } = Dimensions.get('window');
+import colors from 'tailwindcss/colors';
 
 interface ProfileStats {
   totalQuizzesTaken: number;
@@ -38,7 +42,7 @@ const StatsCard = ({
   value,
   colors,
   icon,
-  delay = 0
+  delay = 0,
 }: {
   title: string;
   value: string | number;
@@ -60,14 +64,13 @@ const StatsCard = ({
     <Animated.View
       entering={FadeInUp.delay(delay).springify()}
       style={animatedStyle}
-      className="flex-1 min-w-[45%] mb-3"
-    >
-      <LinearGradient colors={colors as any} className="rounded-2xl p-4 shadow-lg">
-        <View className="flex-row items-center justify-between mb-2">
+      className="mb-1 min-w-[45%] flex-1">
+      <LinearGradient colors={colors as any} className="rounded-2xl p-4 shadow-lg overflow-hidden">
+        <View className="mb-2 flex-row items-center justify-between">
           <Ionicons name={icon} size={24} color="white" />
           <Text className="text-2xl font-bold text-white">{String(value)}</Text>
         </View>
-        <Text className="text-white/80 text-sm font-medium">{title}</Text>
+        <Text className="text-sm font-medium text-white/80">{title}</Text>
       </LinearGradient>
     </Animated.View>
   );
@@ -80,7 +83,7 @@ const formatDate = (d: string | null) => (d ? new Date(d).toLocaleDateString() :
 const ProfileHeader = ({
   user,
   premiumStatus,
-  onClose
+  onClose,
 }: {
   user: any;
   premiumStatus: { text: string; color: string };
@@ -106,40 +109,35 @@ const ProfileHeader = ({
     <Animated.View
       entering={FadeInDown.delay(100).springify()}
       style={headerAnimatedStyle}
-      className="mb-6"
-    >
+      className="mb-6">
       <LinearGradient
         colors={['#1F2937', '#374151', '#4B5563']}
-        className="rounded-3xl p-6 shadow-2xl"
+        className="rounded-3xl p-4 shadow-2xl overflow-hidden"
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
+        end={{ x: 1, y: 1 }}>
         {/* Header with close button */}
-        <View className="flex-row justify-between items-center mb-6">
-          <Text className="text-3xl font-bold text-white">Profile</Text>
+        {/* <View className="mb-6 flex-row items-center justify-between">
+          <Text className="text-xl font-bold text-white">Profile</Text>
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel="Close profile"
             onPress={onClose}
-            className="w-12 h-12 rounded-full bg-gray-800/50 items-center justify-center border border-white/10"
-          >
-            <Ionicons name="close" size={24} color="white" />
+            className="h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-gray-800/50">
+            <Ionicons name="close" size={20} color="white" />
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* User Info */}
         <View className="flex-row items-center">
           <Animated.View
             style={avatarAnimatedStyle}
-            className="w-24 h-24 rounded-full overflow-hidden mr-6 border-2 border-white/20 shadow-lg"
-          >
+            className="mr-6 h-24 w-24 overflow-hidden rounded-full border-2 border-white/20 shadow-lg">
             {user?.avatar ? (
-              <Image source={{ uri: user.avatar }} className="w-full h-full" resizeMode="cover" />
+              <Image source={{ uri: user.avatar }} className="h-full w-full" resizeMode="cover" />
             ) : (
               <LinearGradient
                 colors={['#6366F1', '#8B5CF6', '#EC4899']}
-                className="flex-1 justify-center items-center"
-              >
+                className="flex-1 items-center justify-center">
                 <Text className="text-3xl font-bold text-white">
                   {user?.name?.[0]?.toUpperCase() || 'U'}
                 </Text>
@@ -148,35 +146,27 @@ const ProfileHeader = ({
           </Animated.View>
 
           <View className="flex-1">
-            <Text className="text-2xl font-bold text-white mb-1">
-              {user?.name || 'User'}
-            </Text>
-            <Text className="text-gray-300 mb-3 text-base">
-              {user?.email}
-            </Text>
+            <Text className="mb-1 text-2xl font-bold text-white">{user?.name || 'User'}</Text>
+            <Text className="mb-3 text-base text-gray-300">{user?.email}</Text>
 
-            <View className="flex-row items-center flex-wrap">
+            <View className="flex-row flex-wrap items-center">
               <View
-                className="px-4 py-2 rounded-full mr-3 mb-2"
-                style={{ backgroundColor: `${premiumStatus.color}20` }}
-              >
-                <Text
-                  style={{ color: premiumStatus.color }}
-                  className="text-sm font-semibold"
-                >
+                className="mb-2 mr-3 rounded-full px-4 py-2"
+                style={{ backgroundColor: `${premiumStatus.color}20` }}>
+                <Text style={{ color: premiumStatus.color }} className="text-sm font-semibold">
                   {premiumStatus.text}
                 </Text>
               </View>
 
               {user?.role === 'admin' && (
-                <View className="px-4 py-2 rounded-full bg-purple-500/20 mb-2">
-                  <Text className="text-purple-400 text-sm font-semibold">Admin</Text>
+                <View className="mb-2 rounded-full bg-purple-500/20 px-4 py-2">
+                  <Text className="text-sm font-semibold text-purple-400">Admin</Text>
                 </View>
               )}
 
               {user?.isEmailVerified && (
-                <View className="px-4 py-2 rounded-full bg-green-500/20 mb-2">
-                  <Text className="text-green-400 text-sm font-semibold">Verified</Text>
+                <View className="mb-2 rounded-full bg-green-500/20 px-4 py-2">
+                  <Text className="text-sm font-semibold text-green-400">Verified</Text>
                 </View>
               )}
             </View>
@@ -185,8 +175,8 @@ const ProfileHeader = ({
 
         {/* Premium Expiry */}
         {user?.isPremium && user?.premiumExpiry && (
-          <View className="border-t border-gray-600/50 pt-4 mt-4">
-            <Text className="text-gray-400 text-sm">
+          <View className="mt-4 border-t border-gray-600/50 pt-4">
+            <Text className="text-sm text-gray-400">
               Premium expires: {formatDate(user.premiumExpiry)}
             </Text>
           </View>
@@ -244,7 +234,7 @@ export default function UserProfile() {
         setPrefs({
           notifications: fresh?.preferences?.notifications ?? true,
           dailyReminder: fresh?.preferences?.dailyReminder ?? false,
-          theme: (fresh?.preferences?.theme as 'light' | 'dark' | 'auto') ?? 'auto'
+          theme: (fresh?.preferences?.theme as 'light' | 'dark' | 'auto') ?? 'auto',
         });
       } else {
         setError('Failed to load profile');
@@ -270,7 +260,7 @@ export default function UserProfile() {
   };
 
   const buttonAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }]
+    transform: [{ scale: scale.value }],
   }));
 
   const handlePressIn = () => {
@@ -292,7 +282,7 @@ export default function UserProfile() {
         {
           text: 'Cancel',
           style: 'cancel',
-          onPress: () => console.log('Logout cancelled')
+          onPress: () => console.log('Logout cancelled'),
         },
         {
           text: 'Logout',
@@ -305,8 +295,8 @@ export default function UserProfile() {
               console.error('Logout error:', error);
               Alert.alert('Error', 'Failed to logout. Please try again.');
             }
-          }
-        }
+          },
+        },
       ],
       { cancelable: true }
     );
@@ -318,35 +308,42 @@ export default function UserProfile() {
       description: 'Manage your account preferences',
       icon: 'settings-outline' as const,
       route: '/profile',
-      colors: ['#6366F1', '#8B5CF6'] as const
+      colors: ['#6366F1', '#8B5CF6'] as const,
+      isActive: true,
     },
     {
       title: 'Change Password',
       description: 'Update your password',
       icon: 'lock-closed-outline' as const,
       route: '/profile/password',
-      colors: ['#F59E0B', '#EF4444'] as const
+      colors: ['#F59E0B', '#EF4444'] as const,
+      isActive: user?.provider !== 'google',
     },
     {
       title: 'Statistics',
       description: 'View detailed performance stats',
       icon: 'bar-chart-outline' as const,
       route: '/profile/stats',
-      colors: ['#10B981', '#059669'] as const
+      colors: ['#10B981', '#059669'] as const,
+      isActive: true,
     },
     {
       title: 'Delete Account',
       description: 'Permanently delete your account',
       icon: 'trash-outline' as const,
       route: '/profile/delete',
-      colors: ['#EF4444', '#DC2626'] as const
+      colors: ['#EF4444', '#DC2626'] as const,
+      isActive: true,
     },
   ];
 
+  // console.log(JSON.stringify(user, null, 2));
+
   return (
-    <SafeAreaView className="flex-1 bg-[#0F0F0F]">
+    <SafeAreaView className="flex-1 bg-background">
       <ScrollView
         className="flex-1"
+        contentContainerClassName="pb-32"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -355,100 +352,88 @@ export default function UserProfile() {
             colors={['#FF6B6B']}
           />
         }
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
         <View className="p-6">
           {/* Error State */}
           {!!error && (
             <Animated.View
               entering={FadeInDown.springify()}
-              className="mb-4 rounded-xl bg-red-500/15 border border-red-500/30 p-4"
-            >
-              <View className="flex-row items-center mb-2">
+              className="mb-4 rounded-xl border border-red-500/30 bg-red-500/15 p-4">
+              <View className="mb-2 flex-row items-center">
                 <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
-                <Text className="text-red-400 font-semibold ml-2">Error</Text>
+                <Text className="ml-2 font-semibold text-red-400">Error</Text>
               </View>
-              <Text className="text-red-300 mb-3">{error}</Text>
-              <TouchableOpacity
+              <Text className="mb-3 text-red-300">{error}</Text>
+              <Button
+                title="Retry"
                 onPress={onRefresh}
-                className="self-start px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/30"
-              >
-                <Text className="text-red-300 text-sm font-medium">Retry</Text>
-              </TouchableOpacity>
+                className="self-start rounded-lg border border-red-500/30 bg-red-500/20 px-4 py-2"
+                textClassName="text-sm font-medium text-red-300"
+              />
             </Animated.View>
           )}
 
           {/* Loading State */}
-          {loadingProfile && (
-            <Animated.View
-              entering={FadeInDown.springify()}
-              className="mb-4 items-center py-8"
-            >
-              <ActivityIndicator size="large" color="#FF6B6B" />
-              <Text className="text-gray-400 mt-2">Loading profile...</Text>
-            </Animated.View>
-          )}
+          {loadingProfile && <ProfileSkeleton />}
 
           {/* Profile Header */}
-          <ProfileHeader
-            user={user}
-            premiumStatus={premiumStatus}
-            onClose={() => router.back()}
-          />
+          <ProfileHeader user={user} premiumStatus={premiumStatus} onClose={() => router.back()} />
 
           {/* Enhanced Statistics Section */}
           <Animated.View entering={FadeInDown.delay(300).springify()} className="mb-6">
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-xl font-bold text-white">Statistics</Text>
-              <TouchableOpacity
+            <View className="mb-4 flex-row items-center justify-between">
+              <Text className="text-xl font-bold text-neutral-800">Statistics</Text>
+              <Button
+                title="View All"
                 onPress={() => router.push('/profile/stats' as any)}
-                className="flex-row items-center px-3 py-1 rounded-full bg-blue-500/20"
-              >
-                <Text className="text-blue-400 text-sm mr-1">View All</Text>
-                <Ionicons name="chevron-forward" size={16} color="#60A5FA" />
-              </TouchableOpacity>
+                className="flex-row items-center rounded-full bg-blue-500/20 px-3 py-1"
+                textClassName="mr-1 text-sm text-blue-400"
+                rightIcon="chevron-forward-outline"
+                rightIconSize={16}
+                rightIconColor="#60A5FA"
+              />
             </View>
 
             <View className="flex-row flex-wrap gap-3">
               <StatsCard
                 title="Quizzes Taken"
                 value={stats?.totalQuizzesTaken ?? user?.stats?.totalQuizzesTaken ?? 0}
-                colors={['#10B981','#059669']}
+                colors={['#10B981', '#059669']}
                 icon="library-outline"
                 delay={100}
               />
               <StatsCard
                 title="Tests Taken"
                 value={stats?.totalTestsTaken ?? user?.stats?.totalTestsTaken ?? 0}
-                colors={['#22D3EE','#06B6D4']}
+                colors={['#22D3EE', '#06B6D4']}
                 icon="document-text-outline"
                 delay={200}
               />
               <StatsCard
                 title="Average Score"
                 value={`${Math.round((stats?.averageScore ?? user?.stats?.averageScore ?? 0) as number)}%`}
-                colors={['#6366F1','#8B5CF6']}
+                colors={['#6366F1', '#8B5CF6']}
                 icon="trophy-outline"
                 delay={300}
               />
               <StatsCard
                 title="Current Streak"
                 value={stats?.currentStreak ?? user?.stats?.currentStreak ?? 0}
-                colors={['#F59E0B','#D97706']}
+                colors={['#F59E0B', '#D97706']}
                 icon="flame-outline"
                 delay={400}
               />
               <StatsCard
                 title="Correct Answers"
                 value={stats?.correctAnswers ?? user?.stats?.correctAnswers ?? 0}
-                colors={['#EF4444','#DC2626']}
+                colors={['#EF4444', '#DC2626']}
                 icon="checkmark-circle-outline"
                 delay={500}
               />
               <StatsCard
                 title="Total Answered"
                 value={stats?.totalQuestionsAnswered ?? user?.stats?.totalQuestionsAnswered ?? 0}
-                colors={['#A78BFA','#7C3AED']}
+                colors={['#A78BFA', '#7C3AED']}
                 icon="help-circle-outline"
                 delay={600}
               />
@@ -456,26 +441,24 @@ export default function UserProfile() {
           </Animated.View>
 
           {/* Enhanced Preferences Section */}
-          <Animated.View entering={FadeInDown.delay(400).springify()} className="mb-6">
-            <Text className="text-xl font-bold text-white mb-4">Preferences</Text>
+          {/* <Animated.View entering={FadeInDown.delay(400).springify()} className="mb-6">
+            <Text className="mb-4 text-xl font-bold text-neutral-800">Preferences</Text>
             <LinearGradient
               colors={['#1F2937', '#374151', '#4B5563']}
               className="rounded-2xl p-5 shadow-lg"
               start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
+              end={{ x: 1, y: 1 }}> */}
               {/* Notifications Toggle */}
-              <Animated.View
+              {/* <Animated.View
                 entering={SlideInRight.delay(100)}
-                className="flex-row justify-between items-center mb-5 p-3 rounded-xl bg-black/10"
-              >
-                <View className="flex-row items-center flex-1">
-                  <View className="w-10 h-10 rounded-full bg-blue-500/20 items-center justify-center mr-3">
+                className="mb-5 flex-row items-center justify-between rounded-xl bg-black/10 p-3">
+                <View className="flex-1 flex-row items-center">
+                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
                     <Ionicons name="notifications-outline" size={20} color="#60A5FA" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-white font-semibold">Push Notifications</Text>
-                    <Text className="text-gray-400 text-sm">Get notified about new content</Text>
+                    <Text className="font-semibold text-white">Push Notifications</Text>
+                    <Text className="text-sm text-gray-400">Get notified about new content</Text>
                   </View>
                 </View>
                 <TouchableOpacity
@@ -483,29 +466,27 @@ export default function UserProfile() {
                   accessibilityState={{ checked: !!prefs.notifications }}
                   disabled={savingPrefs}
                   onPress={() => applyPrefsUpdate({ notifications: !prefs.notifications })}
-                  className={`w-14 h-8 rounded-full p-1 ${prefs.notifications ? 'bg-green-500' : 'bg-gray-600'}`}
-                >
+                  className={`h-8 w-14 rounded-full p-1 ${prefs.notifications ? 'bg-green-500' : 'bg-gray-600'}`}>
                   <Animated.View
-                    className={`w-6 h-6 rounded-full bg-white shadow-lg ${prefs.notifications ? 'ml-6' : 'ml-0'}`}
+                    className={`h-6 w-6 rounded-full bg-white shadow-lg ${prefs.notifications ? 'ml-6' : 'ml-0'}`}
                     style={{
-                      transform: [{ translateX: prefs.notifications ? 0 : 0 }]
+                      transform: [{ translateX: prefs.notifications ? 0 : 0 }],
                     }}
                   />
                 </TouchableOpacity>
-              </Animated.View>
+              </Animated.View> */}
 
               {/* Daily Reminder Toggle */}
-              <Animated.View
+              {/* <Animated.View
                 entering={SlideInRight.delay(200)}
-                className="flex-row justify-between items-center mb-5 p-3 rounded-xl bg-black/10"
-              >
-                <View className="flex-row items-center flex-1">
-                  <View className="w-10 h-10 rounded-full bg-orange-500/20 items-center justify-center mr-3">
+                className="mb-5 flex-row items-center justify-between rounded-xl bg-black/10 p-3">
+                <View className="flex-1 flex-row items-center">
+                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-orange-500/20">
                     <Ionicons name="alarm-outline" size={20} color="#FB923C" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-white font-semibold">Daily Reminder</Text>
-                    <Text className="text-gray-400 text-sm">Daily study reminders</Text>
+                    <Text className="font-semibold text-white">Daily Reminder</Text>
+                    <Text className="text-sm text-gray-400">Daily study reminders</Text>
                   </View>
                 </View>
                 <TouchableOpacity
@@ -513,134 +494,121 @@ export default function UserProfile() {
                   accessibilityState={{ checked: !!prefs.dailyReminder }}
                   disabled={savingPrefs}
                   onPress={() => applyPrefsUpdate({ dailyReminder: !prefs.dailyReminder })}
-                  className={`w-14 h-8 rounded-full p-1 ${prefs.dailyReminder ? 'bg-green-500' : 'bg-gray-600'}`}
-                >
+                  className={`h-8 w-14 rounded-full p-1 ${prefs.dailyReminder ? 'bg-green-500' : 'bg-gray-600'}`}>
                   <Animated.View
-                    className={`w-6 h-6 rounded-full bg-white shadow-lg ${prefs.dailyReminder ? 'ml-6' : 'ml-0'}`}
+                    className={`h-6 w-6 rounded-full bg-white shadow-lg ${prefs.dailyReminder ? 'ml-6' : 'ml-0'}`}
                     style={{
-                      transform: [{ translateX: prefs.dailyReminder ? 0 : 0 }]
+                      transform: [{ translateX: prefs.dailyReminder ? 0 : 0 }],
                     }}
                   />
                 </TouchableOpacity>
-              </Animated.View>
+              </Animated.View> */}
 
               {/* Theme Selection */}
-              <Animated.View entering={SlideInRight.delay(300)} className="mb-2">
-                <View className="flex-row items-center mb-3">
-                  <View className="w-10 h-10 rounded-full bg-purple-500/20 items-center justify-center mr-3">
+              {/* <Animated.View entering={SlideInRight.delay(300)} className="mb-2">
+                <View className="mb-3 flex-row items-center">
+                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-purple-500/20">
                     <Ionicons name="color-palette-outline" size={20} color="#A78BFA" />
                   </View>
                   <View>
-                    <Text className="text-white font-semibold">Theme</Text>
-                    <Text className="text-gray-400 text-sm">Choose your preferred theme</Text>
+                    <Text className="font-semibold text-white">Theme</Text>
+                    <Text className="text-sm text-gray-400">Choose your preferred theme</Text>
                   </View>
                 </View>
 
-                <View className="flex-row bg-black/20 rounded-xl p-1">
-                  {(['auto','light','dark'] as const).map((t) => (
+                <View className="flex-row rounded-xl bg-black/20 p-1">
+                  {(['auto', 'light', 'dark'] as const).map((t) => (
                     <TouchableOpacity
                       key={t}
                       disabled={savingPrefs}
                       onPress={() => applyPrefsUpdate({ theme: t })}
-                      className={`flex-1 py-3 rounded-lg ${prefs.theme === t ? 'bg-white/10 shadow-lg' : ''}`}
+                      className={`flex-1 rounded-lg py-3 ${prefs.theme === t ? 'bg-white/10 shadow-lg' : ''}`}
                       accessibilityRole="button"
                       accessibilityState={{ selected: prefs.theme === t }}
-                      accessibilityLabel={`Set theme to ${t}`}
-                    >
+                      accessibilityLabel={`Set theme to ${t}`}>
                       <View className="items-center">
                         <Ionicons
-                          name={t === 'auto' ? 'phone-portrait-outline' : t === 'light' ? 'sunny-outline' : 'moon-outline'}
+                          name={
+                            t === 'auto'
+                              ? 'phone-portrait-outline'
+                              : t === 'light'
+                                ? 'sunny-outline'
+                                : 'moon-outline'
+                          }
                           size={20}
                           color={prefs.theme === t ? '#FFFFFF' : '#9CA3AF'}
                         />
-                        <Text className={`text-center text-sm mt-1 ${prefs.theme === t ? 'text-white font-semibold' : 'text-gray-400'}`}>
+                        <Text
+                          className={`mt-1 text-center text-sm ${prefs.theme === t ? 'font-semibold text-white' : 'text-gray-400'}`}>
                           {t.charAt(0).toUpperCase() + t.slice(1)}
                         </Text>
                       </View>
                     </TouchableOpacity>
                   ))}
                 </View>
-              </Animated.View>
+              </Animated.View> */}
 
-              {savingPrefs && (
+              {/* {savingPrefs && (
                 <Animated.View
                   entering={FadeInUp}
-                  className="flex-row items-center justify-center mt-3 p-2 rounded-lg bg-blue-500/10"
-                >
+                  className="mt-3 flex-row items-center justify-center rounded-lg bg-blue-500/10 p-2">
                   <ActivityIndicator size="small" color="#60A5FA" />
-                  <Text className="text-blue-400 text-sm ml-2">Saving preferences...</Text>
+                  <Text className="ml-2 text-sm text-blue-400">Saving preferences...</Text>
                 </Animated.View>
               )}
             </LinearGradient>
-          </Animated.View>
+          </Animated.View> */}
 
           {/* Enhanced Account Section */}
           <Animated.View entering={FadeInDown.delay(500).springify()} className="mb-6">
-            <Text className="text-xl font-bold text-white mb-4">Account Settings</Text>
-            <View className="space-y-3">
-              {menuItems.map((item, index) => (
-                <Animated.View
-                  key={item.title}
-                  entering={FadeInRight.delay(600 + index * 100).springify()}
-                >
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    accessibilityLabel={item.title}
+            <Text className="mb-4 text-xl font-bold text-neutral-800">Account Settings</Text>
+            <View className="gap-2">
+              {menuItems.map((item) => (
+                item.isActive && ( // Only render active items
+                  <Button
+                    key={item.title}
                     onPress={() => router.push(item.route as any)}
                     onPressIn={handlePressIn}
                     onPressOut={handlePressOut}
-                    className="rounded-2xl overflow-hidden shadow-lg"
-                    style={buttonAnimatedStyle}
+                    className="overflow-hidden rounded-2xl bg-transparent p-0 "
+                    // Button supports children; render the existing gradient content
                   >
                     <LinearGradient
                       colors={item.colors}
-                      className="p-5 flex-row items-center"
+                      className="flex-row items-center p-5 overflow-hidden rounded-2xl"
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
-                    >
-                      <View className="w-12 h-12 rounded-full bg-white/20 items-center justify-center mr-4">
+                      >
+                      <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-white/20">
                         <Ionicons name={item.icon} size={24} color="white" />
                       </View>
                       <View className="flex-1">
-                        <Text className="text-lg font-bold text-white mb-1">{item.title}</Text>
-                        <Text className="text-white/80 text-sm">{item.description}</Text>
+                        <Text className="mb-1 text-lg font-bold text-white">{item.title}</Text>
+                        <Text className="text-sm text-white/80">{item.description}</Text>
                       </View>
-                      <View className="w-8 h-8 rounded-full bg-white/20 items-center justify-center">
+                      <View className="h-8 w-8 items-center justify-center rounded-full bg-white/20">
                         <Ionicons name="chevron-forward" size={18} color="white" />
                       </View>
                     </LinearGradient>
-                  </TouchableOpacity>
-                </Animated.View>
+                  </Button>
+                ) // End of conditional rendering for active items
               ))}
             </View>
           </Animated.View>
 
           {/* Enhanced Logout Section */}
-          <Animated.View entering={FadeInDown.delay(1000).springify()}>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Logout"
+          <Animated.View entering={FadeInDown.delay(1000).springify()} style={buttonAnimatedStyle}>
+            <Button
+              title="Logout"
               onPress={handleLogout}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-              style={buttonAnimatedStyle}
-              className="bg-red-500/10 border-2 border-red-500/30 p-5 rounded-2xl flex-row items-center justify-center shadow-lg"
-            >
-              <View className="w-12 h-12 rounded-full bg-red-500/20 items-center justify-center mr-4">
-                <Ionicons name="log-out-outline" size={24} color="#EF4444" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-red-500 font-bold text-lg">Logout</Text>
-                <Text className="text-red-400/80 text-sm">Sign out of your account</Text>
-              </View>
-              <View className="w-8 h-8 rounded-full bg-red-500/20 items-center justify-center">
-                <Ionicons name="exit-outline" size={18} color="#EF4444" />
-              </View>
-            </TouchableOpacity>
+              className="flex-row items-center justify-center rounded-2xl border-2 border-red-500/30 bg-red-500 p-5 shadow-lg"
+              textClassName="text-lg font-bold text-red-100"
+              // leftIcon={<Ionicons name="log-out-outline" size={24} color={colors.red[100]} />}
+              rightIcon={<Ionicons name="exit-outline" size={18} color={colors.red[100]} />}
+            />
           </Animated.View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-

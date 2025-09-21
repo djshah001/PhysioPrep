@@ -11,6 +11,7 @@ import { Button } from 'components/ui/button';
 import { fetchSubjectAtom, loadingAtom, subjectAtom } from 'store/subject';
 import { SubjectDetailSkeleton } from 'components/skeletons/SubjectDetailSkeleton';
 import colors from 'tailwindcss/colors';
+import { ProgressBar } from '~/ProgressBar';
 
 export default function SubjectDetailPage() {
   const { id, primaryColor, secondaryColor } = useLocalSearchParams();
@@ -29,11 +30,11 @@ export default function SubjectDetailPage() {
   }, [navigation, subject]);
 
   useEffect(() => {
-    if (id) fetchSubject(id as string,false);
+    if (id) fetchSubject(id as string, false);
   }, [id, fetchSubject]);
 
   const onRefresh = () => {
-    if (id) fetchSubject(id as string,true);
+    if (id) fetchSubject(id as string, true);
   };
 
   if (loading || !subject) {
@@ -41,6 +42,9 @@ export default function SubjectDetailPage() {
   }
 
   // console.log('subject:',JSON.stringify(subject, null, 2));
+
+  const progress =
+    (subject.userStats?.correctlyAnsweredQuestions ?? 0) / (subject.stats?.totalQuestions ?? 1);
 
   return (
     <View className="flex-1 bg-background">
@@ -95,23 +99,36 @@ export default function SubjectDetailPage() {
                 label={`${subject.userStats?.correctlyAnsweredQuestions ?? 0} Correctly Answered`}
               />
             </View>
-            {/* Quiz/Test Buttons */}
-            <View className="mt-6 flex-row gap-4">
-              <Button
-                title="Subject Quiz"
-                leftIcon="school-outline"
-                onPress={() => router.push(`/subjects/${subject._id}/quiz`)}
-                className="flex-1 rounded-full bg-indigo-500/80 shadow-md"
-                textClassName="text-white text-lg font-bold"
+
+            <View className="mt-6 gap-2 ">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-lg font-semibold text-neutral-800">Your Progress</Text>
+                <Text className="text-lg font-semibold text-neutral-800">
+                  {Math.round(progress * 100)}%
+                </Text>
+              </View>
+              <ProgressBar
+                value={Math.round(progress * 100)}
+                color={colors.green[400]}
               />
-              {/* <Button
+            </View>
+            {/* Quiz/Test Buttons */}
+            {/* <View className="mt-6 flex-row gap-4 "> */}
+            <Button
+              title="Subject Quiz"
+              leftIcon="school-outline"
+              onPress={() => router.push(`/subjects/${subject._id}/quiz`)}
+              className="mt-6 flex-1 rounded-2xl bg-indigo-500/80 shadow-md"
+              textClassName="text-white text-lg font-bold"
+            />
+            {/* <Button
                 title="Comprehensive Test"
                 rightIcon="clipboard-outline"
                 onPress={() => router.push(`/subjects/comprehensive-test`)}
                 className="flex-1 rounded-3xl bg-neutral-900 shadow-md"
                 textClassName="text-white text-lg font-bold"
               /> */}
-            </View>
+            {/* </View> */}
           </View>
         </View>
 

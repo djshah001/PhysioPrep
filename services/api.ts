@@ -25,7 +25,7 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    console.log(error.response?.data);
+    console.log( 'Error in response interceptor:',error.response?.data);
     const originalRequest = error.config;
 
     // Check if error is 401 (Unauthorized) or 403 (Forbidden) and we haven't already tried to refresh
@@ -40,6 +40,7 @@ api.interceptors.response.use(
 
         // Get refresh token from storage
         const refreshToken = await AsyncStorage.getItem('refreshToken');
+        console.log('Refresh token:', refreshToken);
 
         if (!refreshToken) {
           throw new Error('No refresh token available');

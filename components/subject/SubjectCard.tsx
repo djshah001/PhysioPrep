@@ -35,6 +35,10 @@ export const SubjectCard = ({ subject, index, isAdmin }: SubjectCardProps) => {
   const [primaryColor, secondaryColor] = subjectColors[colorIndex];
   // console.log(JSON.stringify(subject,null,2))
 
+  const progress = stats.totalQuestions
+    ? (userStats.correctlyAnsweredQuestions ?? 0) / (stats.totalQuestions ?? 1)
+    : 0;
+
   return (
     <Animated.View entering={FadeInRight.delay(index * 80).springify()} className="mb-4 ">
       <LinearGradient
@@ -63,22 +67,12 @@ export const SubjectCard = ({ subject, index, isAdmin }: SubjectCardProps) => {
                   <View className="mb-1 flex-row items-center justify-between gap-2">
                     {/* <Text className=" text-xs text-white "> Progress</Text> */}
                     <ProgressBar
-                      value={
-                        stats.totalQuestions === 0
-                          ? 0
-                          : (userStats.correctlyAnsweredQuestions / stats.totalQuestions) * 100
-                      }
+                      value={Math.round(progress * 100)}
                       color={colors.indigo[500]}
                       className="flex-1"
                     />
                     <Text className=" text-sm text-white ">
-                      {stats.totalQuestions === 0
-                        ? 0
-                        : (
-                            (userStats.correctlyAnsweredQuestions / stats.totalQuestions) *
-                            100
-                          ).toFixed(0)}
-                      %
+                      {Math.round(progress * 100)}%
                     </Text>
                   </View>
                 </View>

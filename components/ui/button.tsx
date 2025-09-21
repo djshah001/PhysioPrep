@@ -4,7 +4,7 @@ import { cn } from 'lib/utils';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 interface ButtonProps {
-  title: string;
+  title?: string;
   onPress: () => void;
   disabled?: boolean;
   className?: string;
@@ -16,6 +16,9 @@ interface ButtonProps {
   rightIcon?: keyof typeof Ionicons.glyphMap | null | React.ReactElement;
   rightIconSize?: number;
   rightIconColor?: string;
+  children?: React.ReactNode;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
 }
 
 export function Button({
@@ -31,6 +34,9 @@ export function Button({
   rightIcon = null,
   rightIconSize = 20,
   rightIconColor = 'white',
+  children,
+  onPressIn,
+  onPressOut,
 }: ButtonProps) {
   const scale = useSharedValue(1);
 
@@ -49,6 +55,8 @@ export function Button({
           });
           onPress();
         }}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
         disabled={disabled || loading}
         className={cn(
           'flex-row items-center justify-center gap-1 rounded-xl bg-primary px-4 py-3 shadow-xl shadow-primary',
@@ -59,28 +67,37 @@ export function Button({
           <ActivityIndicator color="white" />
         ) : (
           <>
-            {leftIcon && typeof leftIcon === 'string' ? (
-              <Ionicons
-                name={typeof leftIcon === 'string' ? leftIcon : 'chevron-forward-outline'}
-                size={leftIconSize}
-                color={leftIconColor}
-                className=""
-              />
+            {/** If children provided, render them verbatim so Button can be used as a wrapper for complex UIs */}
+            {children ? (
+              children
             ) : (
-              leftIcon
-            )}
-            <Text className={cn('text-base font-semibold leading-6 text-white ', textClassName)}>
-              {title}
-            </Text>
-            {rightIcon && typeof rightIcon === 'string' ? (
-              <Ionicons
-                name={typeof rightIcon === 'string' ? rightIcon : 'chevron-forward-outline'}
-                size={rightIconSize}
-                color={rightIconColor}
-                className=""
-              />
-            ) : (
-              rightIcon
+              <>
+                {leftIcon && typeof leftIcon === 'string' ? (
+                  <Ionicons
+                    name={typeof leftIcon === 'string' ? leftIcon : 'chevron-forward-outline'}
+                    size={leftIconSize}
+                    color={leftIconColor}
+                    className=""
+                  />
+                ) : (
+                  leftIcon
+                )}
+                {title ? (
+                  <Text className={cn('text-base font-semibold leading-6 text-white ', textClassName)}>
+                    {title}
+                  </Text>
+                ) : null}
+                {rightIcon && typeof rightIcon === 'string' ? (
+                  <Ionicons
+                    name={typeof rightIcon === 'string' ? rightIcon : 'chevron-forward-outline'}
+                    size={rightIconSize}
+                    color={rightIconColor}
+                    className=""
+                  />
+                ) : (
+                  rightIcon
+                )}
+              </>
             )}
           </>
         )}

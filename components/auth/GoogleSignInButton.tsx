@@ -44,6 +44,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
       setIsLoading(true);
 
       const result = await googleSignIn();
+      // console.log('Google sign-in result:', result);
 
       if (result.success) {
         onSuccess?.();
