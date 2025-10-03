@@ -1,4 +1,3 @@
-import React from 'react';
 import { Stack, useRouter } from 'expo-router';
 // import { BlurView } from 'expo-blur';
 import { View, Text, Pressable } from 'react-native';
@@ -25,7 +24,7 @@ const Header = () => {
                 PhysioPrep
               </Text>
             </Pressable>
-            <View className="flex-row items-center space-x-4 gap-2">
+            {/* <View className="flex-row items-center space-x-4 gap-2">
               <Pressable
                 onPress={() => router.push('/notifications')}
                 className="rounded-full bg-primary/10 p-2">
@@ -36,7 +35,7 @@ const Header = () => {
                 className="rounded-full bg-primary/10 p-2">
                 <Ionicons name="settings-outline" size={24} color={Colors.primary} />
               </Pressable>
-            </View>
+            </View> */}
           </View>
         </View>
       </View>

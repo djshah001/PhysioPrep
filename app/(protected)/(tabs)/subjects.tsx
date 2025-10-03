@@ -4,6 +4,7 @@ import { useAuth } from 'hooks/useAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SubjectCard } from 'components/subject/SubjectCard';
 import { EmptySubject } from 'components/subject/EmptySubject';
+import { SubjectsScreenSkeleton } from 'components/skeletons/SubjectsScreenSkeleton';
 import { useAtom, useSetAtom } from 'jotai';
 import { subjectsAtom, loadingAtom, errorAtom, fetchSubjectsAtom } from 'store/subject';
 import colors from 'tailwindcss/colors';
@@ -36,21 +37,7 @@ export default function SubjectsPage() {
   // console.log(testState.Qs.length)
 
   if (loading) {
-    return (
-      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
-        <View className="mx-4 mt-4 animate-pulse rounded-2xl">
-          <View className="h-12 w-full rounded-3xl bg-white shadow-lg " />
-        </View>
-        <ScrollView contentContainerClassName="flex-1 p-6 flex-row flex-wrap">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-            <View
-              key={i}
-              className={`mb-4 ${i % 2 !== 0 ? 'mr-3' : ''} h-40 w-[48%] animate-pulse rounded-2xl bg-card/30`}
-            />
-          ))}
-        </ScrollView>
-      </SafeAreaView>
-    );
+    return <SubjectsScreenSkeleton />;
   }
 
   if (error) {

@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Topic, Subject, quizAnswerType } from 'types/types';
 import { router } from 'expo-router';
 
-const API_URL = 'http://10.75.7.172:5000/api';
+const API_URL = 'http://10.189.64.172:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,

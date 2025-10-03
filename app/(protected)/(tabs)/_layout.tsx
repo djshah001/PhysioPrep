@@ -158,7 +158,7 @@ export default function TabsLayout() {
           header: () => <CustomHeader title="Subjects" />,
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="explore"
         options={{
           title: 'Explore',
@@ -166,7 +166,7 @@ export default function TabsLayout() {
             <CustomTabBar color={color} size={size} focused={focused} name="compass" />
           ),
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="comprehensive-test"
         options={{

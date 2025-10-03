@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Pressable, RefreshControl } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Link, useRouter } from 'expo-router';
 import api from 'services/api';
 import { useAtom } from 'jotai';
-import { dailyQuestionVisibleAtom, homeLoadingAtom, homeStatsAtom } from 'lib/atoms/home';
+import { dailyQuestionVisibleAtom, homeStatsAtom } from 'store/home';
 import { Button } from '~/ui/button';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ProgressBar } from '~/ProgressBar';
@@ -17,69 +17,81 @@ import { Question } from 'types/types';
 export default function BentoHome() {
   const router = useRouter();
   const [stats, setStats] = useAtom(homeStatsAtom);
-  const [loading, setLoading] = useAtom(homeLoadingAtom);
+  const [loading, setLoading] = useState(true);
   const [dqVisible, setDqVisible] = useAtom(dailyQuestionVisibleAtom);
+
+  const run = async (isMounted: boolean) => {
+    try {
+      setLoading(true);
+      const res = await api.get('/users/me/stats');
+      setStats(res.data?.data || null);
+    } catch (e) {
+      console.error('Failed to fetch stats:', e);
+      // noop
+    } finally {
+      if (isMounted) setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
-    const run = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get('/users/me/stats');
-        if (!isMounted) return;
-        setStats(res.data?.data || null);
-      } catch (e) {
-        // noop
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-    run();
+    run(isMounted);
     return () => {
       isMounted = false;
     };
+    // eslint-disable-next-line
   }, [setStats, setLoading]);
 
-  return (
-    <ScrollView className="flex-1 bg-background p-4">
-      {loading && (
-        <View className="p-4">
-          <View className="mb-4 h-36 animate-pulse rounded-3xl bg-card/50" />
-          <View className="mb-4 h-28 animate-pulse rounded-3xl bg-card/50" />
-          <View className="mb-4 h-20 animate-pulse rounded-2xl bg-card/50" />
-        </View>
-      )}
-      {!loading && (
-        <>
-          {/* Bento Grid */}
-          <View className="flex-1 flex-row gap-2">
-        {/* Left: Primary metric */}
-        <Animated.View entering={FadeInDown.delay(50).springify()} className="flex-1">
-          <View className="flex-1 justify-center gap-2 rounded-3xl bg-blue-500 p-5 shadow-lg shadow-slate-600">
-            <Text className="text-sm text-blue-200">Correct Answers</Text>
-            <Text className="text-4xl font-bold text-white">
-              {stats?.totalCorrectlyAnswered ?? 0}
-              <Text className="text-2xl font-bold text-white"> / {stats?.totalQuestions ?? 0}</Text>
-            </Text>
-            <Text className="text-sm text-blue-100">
-              Accuracy {stats?.accuracyPercentage ?? 0}% · Avg time{' '}
-              {stats?.averageTimePerQuestion ?? 0}s
-            </Text>
-          </View>
-        </Animated.View>
+  if (loading) {
+    return <BentoHomeSkeleton />;
+  }
 
-        {/* Right: Top streak, Bottom daily question CTA */}
-        <View className="flex-1 gap-2">
-          <Animated.View entering={FadeInDown.delay(100).springify()}>
-            <View className="gap-2 rounded-3xl bg-rose-500 p-5 shadow-2xl shadow-rose-500">
-              <Text className="text-sm text-rose-100">Current Streak</Text>
-              <Text className="text-3xl font-bold text-white">{stats?.currentStreak ?? 0} 🔥</Text>
-              {/* <Text style={{ color: '#94A3B8', fontSize: 12 }}>Keep it going!</Text> */}
+  return (
+    <ScrollView
+      className="flex-1 bg-background p-4"
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={loading}
+          onRefresh={() => run(true)}
+          colors={[colors.blue[500], colors.rose[500]]}
+        />
+      }>
+      <>
+        {/* Bento Grid */}
+        <View className="flex-1 flex-row gap-2">
+          {/* Left: Primary metric */}
+          <Animated.View entering={FadeInDown.delay(50).springify()} className="flex-1">
+            <View className="flex-1 justify-center gap-2 rounded-3xl bg-blue-500 p-5 shadow-lg shadow-slate-600">
+              <Text className="text-sm text-blue-200">Correct Answers</Text>
+              <Text className="text-4xl font-bold text-white">
+                {stats?.totalCorrectlyAnswered ?? 0}
+                <Text className="text-2xl font-bold text-white">
+                  {' '}
+                  / {stats?.totalQuestions ?? 0}
+                </Text>
+              </Text>
+              <Text className="text-sm text-blue-100">
+                Accuracy {stats?.accuracyPercentage ?? 0}% · Avg time{' '}
+                {stats?.averageTimePerQuestion ?? 0}s
+              </Text>
             </View>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(150).springify()}>
-            {/* <TouchableOpacity
+          {/* Right: Top streak, Bottom daily question CTA */}
+          <View className="flex-1 gap-2">
+            <Animated.View entering={FadeInDown.delay(100).springify()}>
+              <View className="gap-2 rounded-3xl bg-rose-500 p-5 shadow-2xl shadow-rose-500">
+                <Text className="text-sm text-rose-100">Current Streak</Text>
+                <Text className="text-3xl font-bold text-white">
+                  {stats?.currentStreak ?? 0} 🔥
+                </Text>
+                {/* <Text style={{ color: '#94A3B8', fontSize: 12 }}>Keep it going!</Text> */}
+              </View>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(150).springify()}>
+              {/* <TouchableOpacity
               onPress={() => setDqVisible(true)}
               style={{ backgroundColor: '#1F2937', borderRadius: 16, padding: 16 }}>
               <Text style={{ color: '#D1D5DB', fontSize: 14 }}>Daily Question</Text>
@@ -92,18 +104,19 @@ export default function BentoHome() {
                   : 'Available until midnight'}
               </Text>
             </TouchableOpacity> */}
-            <Button
-              title="Daily Question"
-              onPress={() => setDqVisible(true)}
-              className="rounded-full bg-green-500 py-4 shadow-lg shadow-black"
-              textClassName="text-white"
-              rightIcon={<MaterialCommunityIcons name="arrow-top-right" size={20} color="white" />}
-            />
-          </Animated.View>
-        </View>
+              <Button
+                title="Daily Question"
+                onPress={() => setDqVisible(true)}
+                className="rounded-full bg-green-500 py-4 shadow-lg shadow-black"
+                textClassName="text-white"
+                rightIcon={
+                  <MaterialCommunityIcons name="arrow-top-right" size={20} color="white" />
+                }
+              />
+            </Animated.View>
           </View>
-        </>
-      )}
+        </View>
+      </>
 
       {/* Embedded Daily Question inside Home */}
       {dqVisible && (
@@ -301,8 +314,9 @@ function DailyQuestionCard({ onClose }: { onClose: () => void }) {
               <Text style={{ color: '#94A3B8' }}>Your answer:</Text>
               <AnswerOption
                 text={
-                  state.question?.options?.find((o) => o._id === state.userResponse?.selectedOptionId)
-                    ?.text as string
+                  state.question?.options?.find(
+                    (o) => o._id === state.userResponse?.selectedOptionId
+                  )?.text as string
                 }
                 onPress={() => {}}
                 selected={true}
@@ -357,5 +371,107 @@ function DailyQuestionCard({ onClose }: { onClose: () => void }) {
         html={state.question?.explanationHtml || ''}
       />
     </>
+  );
+}
+
+// Skeleton component that mirrors the exact BentoHome layout
+function BentoHomeSkeleton() {
+  const SkeletonBlock = ({ className }: { className?: string }) => (
+    <View className={`animate-pulse rounded-md bg-card/50 ${className}`} />
+  );
+
+  return (
+    <ScrollView className="flex-1 bg-background p-4" showsVerticalScrollIndicator={false}>
+      {/* Main Bento Grid Skeleton */}
+      <View className="flex-1 flex-row gap-2">
+        {/* Left: Primary metric card skeleton */}
+        <Animated.View entering={FadeInDown.delay(50).springify()} className="flex-1">
+          <View className="flex-1 justify-center gap-2 rounded-3xl bg-blue-500 p-5 shadow-lg shadow-slate-600/20">
+            <SkeletonBlock className="h-4 w-24 bg-blue-200/40" />
+            <View className="flex-row items-baseline gap-1">
+              <SkeletonBlock className="h-10 w-16 bg-white/40" />
+              <SkeletonBlock className="h-6 w-8 bg-white/40" />
+              <SkeletonBlock className="h-6 w-12 bg-white/40" />
+            </View>
+            <SkeletonBlock className="h-4 w-40 bg-blue-100/40" />
+          </View>
+        </Animated.View>
+
+        {/* Right: Streak and Daily Question skeleton */}
+        <View className="flex-1 gap-2">
+          {/* Streak card skeleton */}
+          <Animated.View entering={FadeInDown.delay(100).springify()}>
+            <View className="gap-2 rounded-3xl bg-rose-500 p-5 shadow-2xl shadow-rose-500/20">
+              <SkeletonBlock className="h-4 w-20 bg-rose-100/40" />
+              <View className="flex-row items-center gap-2">
+                <SkeletonBlock className="h-8 w-8 bg-white/40" />
+                <SkeletonBlock className="h-6 w-6 bg-white/40 rounded-full" />
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Daily Question button skeleton */}
+          <Animated.View entering={FadeInDown.delay(150).springify()}>
+            <View className="rounded-full bg-green-500 px-5 py-4 shadow-lg shadow-black/20">
+              <View className="flex-row items-center justify-center gap-2">
+                <SkeletonBlock className="h-5 w-24 bg-white/40" />
+                <SkeletonBlock className="h-5 w-5 rounded-full bg-white/40" />
+              </View>
+            </View>
+          </Animated.View>
+        </View>
+      </View>
+
+      {/* Favorite Subjects section skeleton */}
+      <Animated.View entering={FadeInDown.delay(200).springify()} style={{ marginTop: 16 }}>
+        <View className="mb-2 flex-row gap-1">
+          <SkeletonBlock className="h-4 w-4 rounded-full bg-rose-500/40" />
+          <SkeletonBlock className="h-4 w-32 bg-slate-400/40" />
+        </View>
+        <View className="flex-row flex-wrap gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <View
+              key={i}
+              className="w-[48%] flex-row items-center gap-2 rounded-2xl bg-white/50 p-4 shadow-md shadow-slate-600/20">
+              <SkeletonBlock className="h-8 w-8 rounded-full bg-rose-500/40" />
+              <SkeletonBlock className="h-5 w-16 bg-slate-700/40" />
+            </View>
+          ))}
+        </View>
+      </Animated.View>
+
+      {/* Your Progress section skeleton */}
+      <Animated.View entering={FadeInDown.delay(300).springify()} style={{ marginTop: 16 }}>
+        <View className="mb-4 flex-row items-center justify-between">
+          <View className="flex-row gap-1">
+            <SkeletonBlock className="h-4 w-4 rounded-full bg-rose-500/40" />
+            <SkeletonBlock className="h-4 w-24 bg-slate-400/40" />
+          </View>
+          <SkeletonBlock className="h-4 w-16 bg-blue-500/40" />
+        </View>
+
+        <View className="gap-3">
+          <View className="flex-row flex-wrap gap-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <View
+                key={i}
+                className="w-[48%] rounded-2xl bg-white/50 p-4 shadow-md shadow-slate-600/20">
+                <View className="mb-2 flex-row items-center justify-between">
+                  <SkeletonBlock className="h-5 w-20 bg-slate-700/40" />
+                  <SkeletonBlock className="h-4 w-10 bg-slate-600/40" />
+                </View>
+                {/* Progress bar skeleton */}
+                <View className="h-2 rounded-full bg-gray-200/60">
+                  <SkeletonBlock className="h-2 w-3/5 rounded-full bg-blue-500/40" />
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* Bottom spacing */}
+      <View className="h-32" />
+    </ScrollView>
   );
 }

@@ -2,23 +2,23 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 import { Platform } from 'react-native';
 
 // Google OAuth configuration
-const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '118411292895-cu78fath7rnfmf8lmp66pmpmko78fe0j.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_ID_WEB = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || '118411292895-cu78fath7rnfmf8lmp66pmpmko78fe0j.apps.googleusercontent.com';
 const GOOGLE_CLIENT_ID_ANDROID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || '118411292895-h8mpnda4kqnvno31uls6pa9eao7qqk05.apps.googleusercontent.com';
 const GOOGLE_CLIENT_ID_IOS = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || '118411292895-cu78fath7rnfmf8lmp66pmpmko78fe0j.apps.googleusercontent.com';
 
 // Get the appropriate client ID based on platform
 export const getClientId = () => {
-  if (Platform.OS === 'web') {
-    return GOOGLE_CLIENT_ID_WEB;
-  }
+  // if (Platform.OS === 'web') {
+  //   return GOOGLE_CLIENT_ID_WEB;
+  // }
 
-  if (Platform.OS === 'android') {
-    return GOOGLE_CLIENT_ID_ANDROID;
-  }
-  if (Platform.OS === 'ios') {
-    return GOOGLE_CLIENT_ID_IOS;
-  }
+  // if (Platform.OS === 'android') {
+  //   return GOOGLE_CLIENT_ID_ANDROID;
+  // }
+  // if (Platform.OS === 'ios') {
+  //   return GOOGLE_CLIENT_ID_IOS;
+  // }
 
   return GOOGLE_CLIENT_ID;
 };
@@ -26,8 +26,8 @@ export const getClientId = () => {
 // Configure Google Sign-In
 export const configureGoogleSignIn = () => {
   GoogleSignin.configure({
-    webClientId: '118411292895-cu78fath7rnfmf8lmp66pmpmko78fe0j.apps.googleusercontent.com', // server client ID of type WEB for your server,
-    offlineAccess: true, // if you want to access Google API on behalf of the user FROM YOUR SERVER
+    webClientId: GOOGLE_CLIENT_ID, // server client ID of type WEB for your server,
+    // offlineAccess: true, // if you want to access Google API on behalf of the user FROM YOUR SERVER
     hostedDomain: '', // specifies a hosted domain restriction
     
     // forceCodeForRefreshToken: true, // [Android] related to `serverAuthCode`, read the docs link below *.
@@ -138,6 +138,7 @@ export const isSignedIn = (): boolean => {
 // Utility functions
 export const isGoogleAuthConfigured = (): boolean => {
   const clientId = getClientId();
+  console.log('Google client ID:', clientId);
   return !!clientId && clientId.length > 0;
 };
 

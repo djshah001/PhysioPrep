@@ -31,6 +31,4 @@ export type UserHomeStats = {
 };
 
 export const homeStatsAtom = atom<UserHomeStats | null>(null);
-export const homeLoadingAtom = atom<boolean>(false);
 export const dailyQuestionVisibleAtom = atom<boolean>(false);
-

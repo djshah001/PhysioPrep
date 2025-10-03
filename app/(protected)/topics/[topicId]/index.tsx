@@ -61,11 +61,6 @@ export default function TopicDetailsPage() {
     router.push(`/topics/${topic._id}/quiz`);
   };
 
-  const handleTakeTest = () => {
-    if (!topic) return;
-    router.push(`/topics/${topic._id}/test`);
-  };
-
   const handleEdit = () => {
     if (!topic) return;
     router.push(`/subjects/${subjectId}/topics/${topic._id}/edit`);
@@ -134,6 +129,8 @@ export default function TopicDetailsPage() {
     );
   }
 
+  // console.log(JSON.stringify(topic, null, 2));
+
   return (
     <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
       <View className="p-6">
@@ -160,35 +157,35 @@ export default function TopicDetailsPage() {
               </View>
 
               {/* Subject Info */}
-              <Text className="ml-1 text-base text-neutral-600">
+              {/* <Text className="ml-1 text-base text-neutral-600">
                 Subject: {typeof topic.subject === 'object' ? topic.subject.name : topic.subject}
-              </Text>
+              </Text> */}
             </View>
           </View>
 
           {/* Action Buttons */}
-          <View className="flex-row gap-3">
-            <Button
-              title="Take Quiz"
-              onPress={handleTakeQuiz}
-              className="flex-1 rounded-xl bg-primary/10 py-3"
-              leftIcon="school-outline"
-              leftIconColor={colors.blue[600]}
-              textClassName="text-blue-600"
-            />
-            <Button
+          {/* <View className="flex-row gap-3"> */}
+          <Button
+            title="Take Quiz"
+            onPress={handleTakeQuiz}
+            className="w-full rounded-xl bg-primary/10 py-3"
+            leftIcon="school-outline"
+            leftIconColor={colors.blue[600]}
+            textClassName="text-blue-600"
+          />
+          {/* <Button
               title="Take Test"
               onPress={handleTakeTest}
               className="flex-1 rounded-xl bg-green-100 py-3"
               rightIcon="clipboard-outline"
               rightIconColor={colors.green[700]}
               textClassName="text-green-700"
-            />
-          </View>
+            /> */}
+          {/* </View> */}
         </View>
 
         {/* Enhanced HTML Content Rendering */}
-        {topic.descriptionHtml && (
+        {topic.descriptionHtml ? (
           <View className="mb-4 rounded-3xl bg-white p-4 shadow">
             <Text className="mb-1 ml-2 text-lg font-semibold text-neutral-800">Notes</Text>
             <View className="rounded-2xl bg-neutral-100 p-4">
@@ -199,30 +196,16 @@ export default function TopicDetailsPage() {
                 renderers={renderers}
                 tagsStyles={tagsStyles}
                 systemFonts={['System']}
-                enableExperimentalMarginCollapsing={true}
                 defaultTextProps={{
-                  selectable: true,
-                }}
-                renderersProps={{
-                  img: {
-                    enableExperimentalPercentWidth: true,
-                  },
-                  table: {
-                    tableStyleSpecs: {
-                      outerBorderWidthPx: 1,
-                      rowsBorderWidthPx: 1,
-                      columnsBorderWidthPx: 1,
-                      borderColor: '#e5e7eb',
-                      cellPaddingEm: 0.5,
-                      linkColor: '#3b82f6',
-                    },
-                  },
+                  selectable: false,
                 }}
                 // Ignore problematic elements that don't render properly
                 ignoredDomTags={['colgroup', 'col', 'label']}
               />
             </View>
           </View>
+        ) : (
+          <Text className="mb-4 text-lg font-semibold text-neutral-800">No notes available</Text>
         )}
 
         {/* Statistics Section */}

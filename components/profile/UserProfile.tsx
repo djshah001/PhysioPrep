@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -54,6 +54,7 @@ const StatsCard = ({
 
   useEffect(() => {
     scale.value = withSpring(1, { damping: 15, stiffness: 150 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -95,6 +96,7 @@ const ProfileHeader = ({
   useEffect(() => {
     headerScale.value = withSpring(1, { damping: 15, stiffness: 100 });
     avatarRotation.value = withTiming(360, { duration: 1000 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
@@ -220,6 +222,7 @@ export default function UserProfile() {
 
   useEffect(() => {
     fetchUserProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUserProfile = async () => {
@@ -374,10 +377,12 @@ export default function UserProfile() {
           )}
 
           {/* Loading State */}
-          {loadingProfile && <ProfileSkeleton />}
-
-          {/* Profile Header */}
-          <ProfileHeader user={user} premiumStatus={premiumStatus} onClose={() => router.back()} />
+          {loadingProfile ? (
+            <ProfileSkeleton />
+          ) : (
+            <>
+              {/* Profile Header */}
+              <ProfileHeader user={user} premiumStatus={premiumStatus} onClose={() => router.back()} />
 
           {/* Enhanced Statistics Section */}
           <Animated.View entering={FadeInDown.delay(300).springify()} className="mb-6">
@@ -607,6 +612,8 @@ export default function UserProfile() {
               rightIcon={<Ionicons name="exit-outline" size={18} color={colors.red[100]} />}
             />
           </Animated.View>
+            </>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

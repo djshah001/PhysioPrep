@@ -1,5 +1,5 @@
 import { useAtom } from 'jotai';
-import { homeLoadingAtom } from 'lib/atoms/home';
+import { homeLoadingAtom } from 'store/home';
 import { StatusBar, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
