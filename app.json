@@ -16,7 +16,7 @@
     ],
     "orientation": "portrait",
     "scheme": "physioprep",
-    "icon": "./assets/icon2.png",
+    "icon": "./assets/Icon2.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
@@ -31,7 +31,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon2.png",
+        "foregroundImage": "./assets/Icon2.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.darshanx01.physioprep"
