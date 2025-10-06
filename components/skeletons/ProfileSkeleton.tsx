@@ -11,7 +11,7 @@ const SkeletonBlock = ({ className }: { className?: string }) => (
 export const ProfileSkeleton = () => {
   return (
     <View className="flex-1 bg-background">
-      <ScrollView className="flex-1" contentContainerClassName="p-4 pb-32">
+      <ScrollView className="flex-1" contentContainerClassName="pb-32">
         {/* Enhanced Profile Header Skeleton */}
         <Animated.View entering={FadeInDown.delay(100).springify()} className="mb-6">
           <LinearGradient

@@ -62,17 +62,20 @@ const StatsCard = ({
   }));
 
   return (
+    // entering/layout animation applied to the outer wrapper only
     <Animated.View
       entering={FadeInUp.delay(delay).springify()}
-      style={animatedStyle}
       className="mb-1 min-w-[45%] flex-1">
-      <LinearGradient colors={colors as any} className="rounded-2xl p-4 shadow-lg overflow-hidden">
-        <View className="mb-2 flex-row items-center justify-between">
-          <Ionicons name={icon} size={24} color="white" />
-          <Text className="text-2xl font-bold text-white">{String(value)}</Text>
-        </View>
-        <Text className="text-sm font-medium text-white/80">{title}</Text>
-      </LinearGradient>
+      {/* inner Animated.View holds the transform so it won't be overwritten by layout animation */}
+      <Animated.View style={animatedStyle} className="w-full">
+        <LinearGradient colors={colors as any} className="rounded-2xl p-4 shadow-lg overflow-hidden">
+          <View className="mb-2 flex-row items-center justify-between">
+            <Ionicons name={icon} size={24} color="white" />
+            <Text className="text-2xl font-bold text-white">{String(value)}</Text>
+          </View>
+          <Text className="text-sm font-medium text-white/80">{title}</Text>
+        </LinearGradient>
+      </Animated.View>
     </Animated.View>
   );
 };
@@ -108,82 +111,85 @@ const ProfileHeader = ({
   }));
 
   return (
+    // entering applied here
     <Animated.View
       entering={FadeInDown.delay(100).springify()}
-      style={headerAnimatedStyle}
       className="mb-6">
-      <LinearGradient
-        colors={['#1F2937', '#374151', '#4B5563']}
-        className="rounded-3xl p-4 shadow-2xl overflow-hidden"
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}>
-        {/* Header with close button */}
-        {/* <View className="mb-6 flex-row items-center justify-between">
-          <Text className="text-xl font-bold text-white">Profile</Text>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Close profile"
-            onPress={onClose}
-            className="h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-gray-800/50">
-            <Ionicons name="close" size={20} color="white" />
-          </TouchableOpacity>
-        </View> */}
+      {/* transform applied to this inner Animated.View (no entering on this one) */}
+      <Animated.View style={headerAnimatedStyle}>
+        <LinearGradient
+          colors={['#1F2937', '#374151', '#4B5563']}
+          className="rounded-3xl p-4 shadow-2xl overflow-hidden"
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}>
+          {/* Header with close button */}
+          {/* <View className="mb-6 flex-row items-center justify-between">
+            <Text className="text-xl font-bold text-white">Profile</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Close profile"
+              onPress={onClose}
+              className="h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-gray-800/50">
+              <Ionicons name="close" size={20} color="white" />
+            </TouchableOpacity>
+          </View> */}
 
-        {/* User Info */}
-        <View className="flex-row items-center">
-          <Animated.View
-            style={avatarAnimatedStyle}
-            className="mr-6 h-24 w-24 overflow-hidden rounded-full border-2 border-white/20 shadow-lg">
-            {user?.avatar ? (
-              <Image source={{ uri: user.avatar }} className="h-full w-full" resizeMode="cover" />
-            ) : (
-              <LinearGradient
-                colors={['#6366F1', '#8B5CF6', '#EC4899']}
-                className="flex-1 items-center justify-center">
-                <Text className="text-3xl font-bold text-white">
-                  {user?.name?.[0]?.toUpperCase() || 'U'}
-                </Text>
-              </LinearGradient>
-            )}
-          </Animated.View>
+          {/* User Info */}
+          <View className="flex-row items-center">
+            <Animated.View
+              style={avatarAnimatedStyle}
+              className="mr-6 h-24 w-24 overflow-hidden rounded-full border-2 border-white/20 shadow-lg">
+              {user?.avatar ? (
+                <Image source={{ uri: user.avatar }} className="h-full w-full" resizeMode="cover" />
+              ) : (
+                <LinearGradient
+                  colors={['#6366F1', '#8B5CF6', '#EC4899']}
+                  className="flex-1 items-center justify-center">
+                  <Text className="text-3xl font-bold text-white">
+                    {user?.name?.[0]?.toUpperCase() || 'U'}
+                  </Text>
+                </LinearGradient>
+              )}
+            </Animated.View>
 
-          <View className="flex-1">
-            <Text className="mb-1 text-2xl font-bold text-white">{user?.name || 'User'}</Text>
-            <Text className="mb-3 text-base text-gray-300">{user?.email}</Text>
+            <View className="flex-1">
+              <Text className="mb-1 text-2xl font-bold text-white">{user?.name || 'User'}</Text>
+              <Text className="mb-3 text-base text-gray-300">{user?.email}</Text>
 
-            <View className="flex-row flex-wrap items-center">
-              <View
-                className="mb-2 mr-3 rounded-full px-4 py-2"
-                style={{ backgroundColor: `${premiumStatus.color}20` }}>
-                <Text style={{ color: premiumStatus.color }} className="text-sm font-semibold">
-                  {premiumStatus.text}
-                </Text>
+              <View className="flex-row flex-wrap items-center">
+                <View
+                  className="mb-2 mr-3 rounded-full px-4 py-2"
+                  style={{ backgroundColor: `${premiumStatus.color}20` }}>
+                  <Text style={{ color: premiumStatus.color }} className="text-sm font-semibold">
+                    {premiumStatus.text}
+                  </Text>
+                </View>
+
+                {user?.role === 'admin' && (
+                  <View className="mb-2 rounded-full bg-purple-500/20 px-4 py-2">
+                    <Text className="text-sm font-semibold text-purple-400">Admin</Text>
+                  </View>
+                )}
+
+                {user?.isEmailVerified && (
+                  <View className="mb-2 rounded-full bg-green-500/20 px-4 py-2">
+                    <Text className="text-sm font-semibold text-green-400">Verified</Text>
+                  </View>
+                )}
               </View>
-
-              {user?.role === 'admin' && (
-                <View className="mb-2 rounded-full bg-purple-500/20 px-4 py-2">
-                  <Text className="text-sm font-semibold text-purple-400">Admin</Text>
-                </View>
-              )}
-
-              {user?.isEmailVerified && (
-                <View className="mb-2 rounded-full bg-green-500/20 px-4 py-2">
-                  <Text className="text-sm font-semibold text-green-400">Verified</Text>
-                </View>
-              )}
             </View>
           </View>
-        </View>
 
-        {/* Premium Expiry */}
-        {user?.isPremium && user?.premiumExpiry && (
-          <View className="mt-4 border-t border-gray-600/50 pt-4">
-            <Text className="text-sm text-gray-400">
-              Premium expires: {formatDate(user.premiumExpiry)}
-            </Text>
-          </View>
-        )}
-      </LinearGradient>
+          {/* Premium Expiry */}
+          {user?.isPremium && user?.premiumExpiry && (
+            <View className="mt-4 border-t border-gray-600/50 pt-4">
+              <Text className="text-sm text-gray-400">
+                Premium expires: {formatDate(user.premiumExpiry)}
+              </Text>
+            </View>
+          )}
+        </LinearGradient>
+      </Animated.View>
     </Animated.View>
   );
 };
@@ -336,7 +342,7 @@ export default function UserProfile() {
       icon: 'trash-outline' as const,
       route: '/profile/delete',
       colors: ['#EF4444', '#DC2626'] as const,
-      isActive: true,
+      isActive: false,
     },
   ];
 
@@ -602,15 +608,17 @@ export default function UserProfile() {
           </Animated.View>
 
           {/* Enhanced Logout Section */}
-          <Animated.View entering={FadeInDown.delay(1000).springify()} style={buttonAnimatedStyle}>
-            <Button
-              title="Logout"
-              onPress={handleLogout}
-              className="flex-row items-center justify-center rounded-2xl border-2 border-red-500/30 bg-red-500 p-5 shadow-lg"
-              textClassName="text-lg font-bold text-red-100"
-              // leftIcon={<Ionicons name="log-out-outline" size={24} color={colors.red[100]} />}
-              rightIcon={<Ionicons name="exit-outline" size={18} color={colors.red[100]} />}
-            />
+          <Animated.View entering={FadeInDown.delay(1000).springify()}>
+            <Animated.View style={buttonAnimatedStyle}>
+              <Button
+                title="Logout"
+                onPress={handleLogout}
+                className="flex-row items-center justify-center rounded-2xl border-2 border-red-500/30 bg-red-500 p-5 shadow-lg"
+                textClassName="text-lg font-bold text-red-100"
+                // leftIcon={<Ionicons name="log-out-outline" size={24} color={colors.red[100]} />}
+                rightIcon={<Ionicons name="exit-outline" size={18} color={colors.red[100]} />}
+              />
+            </Animated.View>
           </Animated.View>
             </>
           )}

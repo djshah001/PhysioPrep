@@ -87,7 +87,7 @@ export default function LoginScreen() {
               <Text className="mb-4 text-5xl font-extrabold text-black shadow-xl shadow-purple-500 ">
                 PhysioPrep
               </Text>
-              <Text className="text-3xl font-bold text-neutral-800">Welcome Back</Text>
+              <Text className="text-3xl font-bold text-neutral-800">Learn Like Never Before</Text>
               <Text className="text-base leading-5 text-purple-300">
                 Sign in to continue your learning journey
               </Text>
@@ -135,11 +135,11 @@ export default function LoginScreen() {
                       color={Colors.grey}
                     />
                   </TouchableOpacity>
-                  <TouchableOpacity
+                  {/* <TouchableOpacity
                     onPress={() => router.push('/forgot-password' as string)}
                     className="px-2">
                     <Text className="text-sm font-medium text-primary">Forgot Password?</Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </View>
               </Animated.View>
 
@@ -168,7 +168,7 @@ export default function LoginScreen() {
 
              
 
-              <Animated.View
+              {/* <Animated.View
                 entering={FadeInDown.delay(1000).springify()}
                 className="mt-8 flex-row justify-center text-center">
                 <Text className="text-center text-base text-neutral-700">
@@ -177,7 +177,7 @@ export default function LoginScreen() {
                 <Link href="/register" asChild>
                   <Text className="text-center text-base font-bold text-primary">Sign Up</Text>
                 </Link>
-              </Animated.View>
+              </Animated.View> */}
             </View>
           </View>
         </ScrollView>

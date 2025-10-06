@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Topic, Subject, quizAnswerType } from 'types/types';
 import { router } from 'expo-router';
 
-const API_URL = 'http://10.189.64.172:5000/api';
+// console.log('API_URL:', process.env.EXPO_PUBLIC_API_URL);
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -179,5 +180,14 @@ export const testApi = {
     timeSpent?: number;
   }) => api.post('/tests/comprehensive/submit', data),
 };
+
+export const userApi = {
+  getStats: () => api.get('/users/me/stats'),
+  getProfile: () => api.get('/users/profile'),
+  updateProfile: (data: any) => api.put('/users/profile', data),
+};
+
+// Backward compatibility export
+export const getStats = userApi.getStats;
 
 export default api;

@@ -138,7 +138,7 @@ export const isSignedIn = (): boolean => {
 // Utility functions
 export const isGoogleAuthConfigured = (): boolean => {
   const clientId = getClientId();
-  console.log('Google client ID:', clientId);
+  // console.log('Google client ID:', clientId);
   return !!clientId && clientId.length > 0;
 };
 

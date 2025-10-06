@@ -6,7 +6,8 @@ export default function ProfileLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Profile'
+          title: 'Profile',
+          headerShown: false,
         }}
       />
       {/* <Stack.Screen
@@ -24,7 +25,9 @@ export default function ProfileLayout() {
       <Stack.Screen
         name="stats"
         options={{
-          title: 'Statistics'
+          title: 'Statistics',
+          headerShown: false,
+          
         }}
       />
       <Stack.Screen
