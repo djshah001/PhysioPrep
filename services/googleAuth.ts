@@ -8,6 +8,7 @@ const GOOGLE_CLIENT_ID_ANDROID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROI
 const GOOGLE_CLIENT_ID_IOS = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || '118411292895-cu78fath7rnfmf8lmp66pmpmko78fe0j.apps.googleusercontent.com';
 
 // Get the appropriate client ID based on platform
+// console.log('Google client ID:', GOOGLE_CLIENT_ID);
 export const getClientId = () => {
   // if (Platform.OS === 'web') {
   //   return GOOGLE_CLIENT_ID_WEB;

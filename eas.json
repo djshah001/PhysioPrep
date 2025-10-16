@@ -7,15 +7,15 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "packageManager": "npm"
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
-      "packageManager": "npm"
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
-      "packageManager": "npm"
+      "channel": "production"
     }
   },
   "submit": {

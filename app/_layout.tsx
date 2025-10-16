@@ -3,7 +3,6 @@ import { Stack, SplashScreen } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '../global.css';
-import { MenuProvider } from 'react-native-popup-menu';
 import { configureGoogleSignIn } from '../services/googleAuth';
 
 
@@ -32,7 +31,6 @@ const RootLayout = () => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <MenuProvider>
         <Stack
           screenOptions={{
             headerShown: false,
@@ -40,7 +38,6 @@ const RootLayout = () => {
             <Stack.Screen name="(protected)" />
             <Stack.Screen name="(auth)" />
         </Stack>
-      </MenuProvider>
     </GestureHandlerRootView>
   );
 };

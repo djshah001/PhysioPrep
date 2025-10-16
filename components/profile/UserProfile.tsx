@@ -53,7 +53,7 @@ const StatsCard = ({
   const scale = useSharedValue(0);
 
   useEffect(() => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 150 });
+    scale.value = withSpring(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -97,7 +97,7 @@ const ProfileHeader = ({
   const avatarRotation = useSharedValue(0);
 
   useEffect(() => {
-    headerScale.value = withSpring(1, { damping: 15, stiffness: 100 });
+    headerScale.value = withSpring(1, { damping: 100});
     avatarRotation.value = withTiming(360, { duration: 1000 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

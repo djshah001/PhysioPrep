@@ -27,11 +27,12 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.darshanx01.physioprep"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/Icon2.png",
+        "foregroundImage": "./assets/Icon-main.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.darshanx01.physioprep"
@@ -39,8 +40,14 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "077a1a87-f7d3-4b1b-b823-34fc8b4f69f4"
+        "projectId": "cda44b4e-0140-4043-b4af-aad505c049c5"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/cda44b4e-0140-4043-b4af-aad505c049c5"
     }
   }
 }
