@@ -37,6 +37,7 @@ const RootLayout = () => {
           }}>
             <Stack.Screen name="(protected)" />
             <Stack.Screen name="(auth)" />
+            <Stack.Screen name="index" />
         </Stack>
     </GestureHandlerRootView>
   );

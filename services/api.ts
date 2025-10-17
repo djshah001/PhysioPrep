@@ -4,7 +4,8 @@ import type { Topic, Subject, quizAnswerType } from 'types/types';
 import { router } from 'expo-router';
 
 // console.log('API_URL:', process.env.EXPO_PUBLIC_API_URL);
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const API_URL =
+  process.env.EXPO_PUBLIC_API_URL || 'https://physioprep-server-942466930755.us-south1.run.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -26,7 +27,7 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    console.log( 'Error in response interceptor:',error.response?.data);
+    console.log('Error in response interceptor:', error.response?.data);
     const originalRequest = error.config;
 
     // Check if error is 401 (Unauthorized) or 403 (Forbidden) and we haven't already tried to refresh

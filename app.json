@@ -16,7 +16,7 @@
     ],
     "orientation": "portrait",
     "scheme": "physioprep",
-    "icon": "./assets/icon2.png",
+    "icon": "./assets/icon-main.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/icon2.png",
