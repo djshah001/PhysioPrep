@@ -40,7 +40,8 @@ export const useAuth = () => {
         setIsLoggedIn(true);
         api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
         api.defaults.headers.common['RefreshToken'] = `Bearer ${storedRefreshToken}`;
-        router.replace('/home'); // Redirect to home if logged in
+        return true;
+        // router.replace('/home'); // Redirect to home if logged in
       } else {
         // Clear any partial auth state
         await logout();
@@ -56,6 +57,7 @@ export const useAuth = () => {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
+      console.log('Login initiated...'); // Debug log
       const response = await api.post('/auth/login', { email, password });
       const { token, user, refreshToken } = response.data.data;
 
@@ -71,7 +73,7 @@ export const useAuth = () => {
         setIsLoggedIn(true);
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         api.defaults.headers.common['RefreshToken'] = `Bearer ${refreshToken}`;
-        router.replace('/home');
+        router.replace('/');
       } else {
         await signOutFromGoogle();
         throw new Error(response.data.message || 'Login failed');
@@ -108,7 +110,7 @@ export const useAuth = () => {
         setIsLoggedIn(true);
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         api.defaults.headers.common['RefreshToken'] = `Bearer ${refreshToken}`;
-        router.replace('/home');
+        router.replace('/');
       } else {
         throw new Error(response.data.message || 'Registration failed');
       }
@@ -136,7 +138,7 @@ export const useAuth = () => {
       setToken(null);
       setUser(null);
       setIsLoggedIn(false);
-      router.replace('/(auth)/login');
+      router.replace('/login');
       await signOutFromGoogle();
     } catch (error) {
       console.error('Logout error:', error);
@@ -204,7 +206,7 @@ export const useAuth = () => {
         setIsLoggedIn(true);
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         api.defaults.headers.common['RefreshToken'] = `Bearer ${refreshToken}`;
-        router.replace('/home');
+        router.replace('/');
 
         return { success: true };
       } else {

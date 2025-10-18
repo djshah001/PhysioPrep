@@ -13,12 +13,14 @@ import { ActionSheetRef } from 'react-native-actions-sheet';
 import AnswerOption from '~/quiz/AnswerOption';
 import ExplainSheet from '~/questions/ExplainSheet';
 import { Question } from 'types/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BentoHome() {
   const router = useRouter();
   const [stats, setStats] = useAtom(homeStatsAtom);
   const [loading, setLoading] = useState(true);
   const [dqVisible, setDqVisible] = useAtom(dailyQuestionVisibleAtom);
+  const insets = useSafeAreaInsets();
 
   const run = async (isMounted: boolean) => {
     try {
@@ -59,6 +61,11 @@ export default function BentoHome() {
       }>
       <>
         {/* Bento Grid */}
+        <View style={{ paddingTop: insets.top, marginBottom: 16 }}>
+          <Text className=" font-bold text-blue-500" style={{ fontSize: 32 }}>
+            PhysioPrep
+          </Text>
+        </View>
         <View className="flex-1 flex-row gap-2">
           {/* Left: Primary metric */}
           <Animated.View entering={FadeInDown.delay(50).springify()} className="flex-1">
@@ -379,9 +386,15 @@ function BentoHomeSkeleton() {
   const SkeletonBlock = ({ className }: { className?: string }) => (
     <View className={`animate-pulse rounded-md bg-card/50 ${className}`} />
   );
+  const insets = useSafeAreaInsets();
 
   return (
     <ScrollView className="flex-1 bg-background p-4" showsVerticalScrollIndicator={false}>
+      <View style={{ paddingTop: insets.top, marginBottom: 16 }}>
+        <Text className=" font-bold text-blue-500" style={{ fontSize: 32 }}>
+          PhysioPrep
+        </Text>
+      </View>
       {/* Main Bento Grid Skeleton */}
       <View className="flex-1 flex-row gap-2">
         {/* Left: Primary metric card skeleton */}
@@ -405,7 +418,7 @@ function BentoHomeSkeleton() {
               <SkeletonBlock className="h-4 w-20 bg-rose-100/40" />
               <View className="flex-row items-center gap-2">
                 <SkeletonBlock className="h-8 w-8 bg-white/40" />
-                <SkeletonBlock className="h-6 w-6 bg-white/40 rounded-full" />
+                <SkeletonBlock className="h-6 w-6 rounded-full bg-white/40" />
               </View>
             </View>
           </Animated.View>

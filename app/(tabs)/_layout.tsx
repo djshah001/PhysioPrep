@@ -139,9 +139,9 @@ export default function TabsLayout() {
       // }}
     >
       <Tabs.Screen
-        name="home"
+        name="index"
         options={{
-          title: 'Home',
+          title: 'index',
           tabBarIcon: ({ color, size, focused }) => (
             <CustomTabBar color={color} size={size} focused={focused} name="home" />
           ),

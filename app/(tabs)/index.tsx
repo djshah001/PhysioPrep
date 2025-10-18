@@ -1,7 +1,4 @@
-import { useAtom } from 'jotai';
-import { homeLoadingAtom } from 'store/home';
-import { StatusBar, View } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import { StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BentoHome from '~/home/BentoHome';
 

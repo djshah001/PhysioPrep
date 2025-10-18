@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Topic, Subject, quizAnswerType } from 'types/types';
 import { router } from 'expo-router';
 
-// console.log('API_URL:', process.env.EXPO_PUBLIC_API_URL);
+console.log('API_URL:', process.env.EXPO_PUBLIC_API_URL);
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL || 'https://physioprep-server-942466930755.us-south1.run.app/api';
 

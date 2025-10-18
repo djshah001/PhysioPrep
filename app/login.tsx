@@ -12,18 +12,18 @@ import {
 import { Link, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth';
 import { Button } from 'components/ui/button';
 import { Input } from 'components/ui/input';
 import { Colors } from 'constants/Colors';
-import { GoogleSignInButton, AuthDivider } from '../../components/auth/GoogleSignInButton';
+import { GoogleSignInButton, AuthDivider } from '../components/auth/GoogleSignInButton';
 import Animated, {
   FadeInDown,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
 import { useAtom } from 'jotai';
-import { isLoadingAtom, isLoggedInAtom } from '../../store/auth';
+import { isLoadingAtom, isLoggedInAtom } from '../store/auth';
 import colors from 'tailwindcss/colors';
 
 const { height } = Dimensions.get('window');
@@ -40,7 +40,7 @@ export default function LoginScreen() {
 
   useEffect(() => {
     if (isLoggedIn) {
-      router.replace('/home');
+      router.replace('/(tabs)');
     }
   }, [isLoggedIn]);
 
