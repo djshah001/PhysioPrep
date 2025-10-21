@@ -7,6 +7,8 @@ import { configureGoogleSignIn } from '../services/googleAuth';
 import { useAtom } from 'jotai';
 import { isLoggedInAtom, refreshTokenAtom, tokenAtom, userAtom } from '../store/auth';
 import { useAuth } from '~/useAuth';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'react-native';
 
 // Keep the splash screen visible while we fetch resources
 // SplashScreen.preventAutoHideAsync();
@@ -68,12 +70,17 @@ const RootLayout = () => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView 
+      className="flex-1 bg-background" 
+      edges={['bottom', 'left', 'right']} >
+        <StatusBar barStyle="dark-content" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={hasValidAuth as boolean}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           {/* <Stack.Screen name="profile" /> */}
           <Stack.Screen name="subjects" />
           <Stack.Screen name="topics/[topicId]" />
+          <Stack.Screen name="profile" />
           {/* <Stack.Screen name="quiz" /> */}
           {/* <Stack.Screen name="comprehensive-test" /> */}
           {/* <Stack.Screen name="daily-question" /> */}
@@ -82,6 +89,7 @@ const RootLayout = () => {
           <Stack.Screen name="login" />
         </Stack.Protected>
       </Stack>
+      </SafeAreaView>
     </GestureHandlerRootView>
   );
 };

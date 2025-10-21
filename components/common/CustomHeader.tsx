@@ -5,6 +5,7 @@ import { BlurView } from 'expo-blur';
 import { Colors } from 'constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import colors from 'tailwindcss/colors';
 
 interface HeaderIcon {
   name: keyof typeof Ionicons.glyphMap;
@@ -79,14 +80,14 @@ export function CustomHeader({
             <View className="flex-1 flex-row items-center">
               {showBack && (
                 <Pressable onPress={handleBackPress} className="mr-2 mt-1" hitSlop={8}>
-                  <Ionicons name="chevron-back" size={24} color={Colors.primary} />
+                  <Ionicons name="chevron-back" size={24} color={colors.blue[500]} />
                 </Pressable>
               )}
               {leftIcons.map((icon, index) => renderIcon(icon, index))}
             </View>
           )}
 
-          <Text className="text-center text-2xl font-bold text-primary" numberOfLines={1}>
+          <Text className="text-center text-3xl font-bold text-blue-500" numberOfLines={1}>
             {title}
           </Text>
 
