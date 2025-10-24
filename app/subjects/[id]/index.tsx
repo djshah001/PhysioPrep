@@ -14,7 +14,7 @@ import colors from 'tailwindcss/colors';
 import { ProgressBar } from '~/ProgressBar';
 
 export default function SubjectDetailPage() {
-  const { id, primaryColor, secondaryColor } = useLocalSearchParams();
+  const { id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
   const [subject] = useAtom(subjectAtom);
@@ -44,10 +44,11 @@ export default function SubjectDetailPage() {
   // console.log('subject:',JSON.stringify(subject, null, 2));
 
   const progress =
-    (subject.userStats?.correctlyAnsweredQuestions ?? 0) / (subject.stats?.totalQuestions ?? 1);
+    (subject.userStats?.correctlyAnsweredQuestions ?? 0) / (subject.stats?.totalQuestions || 1 );
 
+  // console.log(JSON.stringify(subject.topics, null, 2));
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-neutral-50">
       <ScrollView
         className="flex-1"
         refreshControl={
@@ -59,7 +60,7 @@ export default function SubjectDetailPage() {
         <View className="mt-3 p-4">
           <View
             // colors={[primaryColor as string, secondaryColor as string]}
-            className="overflow-hidden rounded-3xl bg-white p-6 shadow-lg shadow-neutral-700">
+            className="overflow-hidden rounded-3xl bg-slate-50 p-6 shadow-lg shadow-neutral-700">
             <View className="mb-2 flex-row items-center">
               <View
                 // intensity={50}
@@ -118,7 +119,7 @@ export default function SubjectDetailPage() {
               title="Subject Quiz"
               leftIcon="school-outline"
               onPress={() => router.push(`/subjects/${subject._id}/quiz`)}
-              className="mt-6 flex-1 rounded-2xl bg-indigo-500/80 shadow-md"
+              className="mt-6 flex-1 rounded-2xl bg-indigo-600/80 shadow-md"
               textClassName="text-white text-lg font-bold"
             />
             {/* <Button
@@ -135,12 +136,15 @@ export default function SubjectDetailPage() {
         {/* Topics List */}
         <View className="px-6">
           <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-xl font-semibold text-neutral-600">Topics</Text>
+            <Text className="text-xl font-semibold text-neutral-800">Topics</Text>
           </View>
+          <View className="flex flex-row flex-wrap gap-3">
+
           {subject.topics && subject.topics.length > 0 ? (
-            subject.topics.map((topic) => (
+            subject.topics.map((topic, index) => (
               <TopicCard
                 key={topic._id}
+                index={index}
                 topic={topic}
                 subjectId={subject._id}
                 isAdmin={user?.role === 'admin'}
@@ -153,6 +157,7 @@ export default function SubjectDetailPage() {
               No topics found for this subject.
             </Text>
           )}
+          </View>
         </View>
       </ScrollView>
       {/* Floating Action Button for subject-wise quiz/test */}

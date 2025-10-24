@@ -6,6 +6,7 @@ import { Subject } from 'types/types';
 import { router } from 'expo-router';
 import { ProgressBar } from '~/ProgressBar';
 import colors from 'tailwindcss/colors';
+import Gradients from '~/Gradients';
 
 interface SubjectCardProps {
   subject: Subject;
@@ -13,26 +14,24 @@ interface SubjectCardProps {
   isAdmin: boolean;
 }
 
-const subjectColors = [
-  ['#FF6B6B', '#FF8E8E'], // Coral
-  ['#4ECDC4', '#6ED7D0'], // Turquoise
-  ['#45B7D1', '#6BC5DB'], // Sky Blue
-  ['#3498DB', '#5DADE2'], // Blue
-  ['#96CEB4', '#B4D9C7'], // Sage
-  ['#D4A5A5', '#E5B9B9'], // Rose
-  ['#9B59B6', '#B07CC7'], // Purple
-  ['#2ECC71', '#3DB27B'], // Green
-  ['#E74C3C', '#E95C4E'], // Red
-  ['#F1C40F', '#F2C75C'], // Yellow
-  ['#E67E22', '#E88E4E'], // Orange
-  ['#95A5A6', '#AAB7B8'], // Gray
-  ['#FFEEAD', '#FFF4C4'], // Cream
-];
+// const subjectColors = [
+//   ['#FF6B6B', '#FF8E8E'], // Coral
+//   ['#4ECDC4', '#6ED7D0'], // Turquoise
+//   ['#45B7D1', '#6BC5DB'], // Sky Blue
+//   ['#3498DB', '#5DADE2'], // Blue
+//   ['#96CEB4', '#B4D9C7'], // Sage
+//   ['#D4A5A5', '#E5B9B9'], // Rose
+//   ['#9B59B6', '#B07CC7'], // Purple
+//   ['#2ECC71', '#3DB27B'], // Green
+//   ['#E74C3C', '#E95C4E'], // Red
+//   ['#F1C40F', '#F2C75C'], // Yellow
+//   ['#E67E22', '#E88E4E'], // Orange
+//   ['#95A5A6', '#AAB7B8'], // Gray
+//   ['#FFEEAD', '#FFF4C4'], // Cream
+// ];
 
 export const SubjectCard = ({ subject, index, isAdmin }: SubjectCardProps) => {
   const { _id, name, description, stats, color, userStats } = subject;
-  const colorIndex = index % subjectColors.length;
-  const [primaryColor, secondaryColor] = subjectColors[colorIndex];
   // console.log(JSON.stringify(subject,null,2))
 
   const progress = stats.totalQuestions
@@ -42,7 +41,7 @@ export const SubjectCard = ({ subject, index, isAdmin }: SubjectCardProps) => {
   return (
     <Animated.View entering={FadeInRight.delay(index * 80).springify()} className="mb-4 ">
       <LinearGradient
-        colors={[primaryColor, secondaryColor]}
+        colors={Gradients[index % Gradients.length]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         className="relative overflow-hidden rounded-3xl p-5 ">
@@ -51,8 +50,7 @@ export const SubjectCard = ({ subject, index, isAdmin }: SubjectCardProps) => {
             <Pressable
               onPress={() =>
                 router.push({
-                  pathname: `subjects/${_id}`,
-                  params: { primaryColor, secondaryColor },
+                  pathname: `subjects/${_id}`
                 })
               }
               className="flex-1 p-1">

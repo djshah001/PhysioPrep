@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { Colors } from 'constants/Colors';
@@ -16,6 +16,7 @@ interface HeaderIcon {
 
 interface CustomHeaderProps {
   title: string;
+  subtitle?: string;
   leftIcons?: HeaderIcon[];
   rightIcons?: HeaderIcon[];
   textAlign?: 'left' | 'center' | 'right';
@@ -39,6 +40,7 @@ export const HeaderBlurView = ({ height }: { height: number }) => (
 
 export function CustomHeader({
   title,
+  subtitle,
   leftIcons = [],
   rightIcons = [],
   textAlign = 'center',
@@ -72,29 +74,19 @@ export function CustomHeader({
 
   return (
     <View
-      style={[{ paddingTop: insets.top }]}
-      className={`${className} bg-white px-2 py-1 shadow-lg shadow-neutral-700`}>
-      <View className="overflow-hidden">
-        <View className="h-14 flex-row items-center px-4">
-          {(leftIcons.length > 0 || showBack) && (
-            <View className="flex-1 flex-row items-center">
-              {showBack && (
-                <Pressable onPress={handleBackPress} className="mr-2 mt-1" hitSlop={8}>
-                  <Ionicons name="chevron-back" size={24} color={colors.blue[500]} />
-                </Pressable>
-              )}
-              {leftIcons.map((icon, index) => renderIcon(icon, index))}
-            </View>
-          )}
-
-          <Text className="text-center text-3xl font-bold text-blue-500" numberOfLines={1}>
-            {title}
-          </Text>
-
-          <View className="flex-1 flex-row items-center justify-end gap-2">
-            {rightIcons.map((icon, index) => renderIcon(icon, index))}
-          </View>
-        </View>
+      //  entering={FadeInDown.delay(100).springify()}
+      style={{ paddingTop: insets.top + 8 }}
+      className="flex-row items-center border-b border-neutral-200 bg-white px-6 py-4">
+      {showBack && (
+        <TouchableOpacity
+          onPress={handleBackPress}
+          className="mr-4 rounded-full bg-neutral-100 p-2">
+          <Ionicons name="arrow-back" size={20} color="#374151" />
+        </TouchableOpacity>
+      )}
+      <View className="flex-1">
+        <Text className="text-2xl font-bold text-neutral-800">{title}</Text>
+        {subtitle && <Text className="text-sm text-neutral-500">{subtitle}</Text>}
       </View>
     </View>
   );

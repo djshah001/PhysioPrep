@@ -27,7 +27,7 @@ export const getClientId = () => {
 // Configure Google Sign-In
 export const configureGoogleSignIn = () => {
   GoogleSignin.configure({
-    webClientId: GOOGLE_CLIENT_ID, // server client ID of type WEB for your server,
+    webClientId: '942466930755-fcq4u3qsn50jklgu2nmpij1fkkruu808.apps.googleusercontent.com', // server client ID of type WEB for your server,
     // offlineAccess: true, // if you want to access Google API on behalf of the user FROM YOUR SERVER
     hostedDomain: '', // specifies a hosted domain restriction
     

@@ -1,12 +1,16 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { View, Text, Pressable, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Topic } from 'types/types';
+import Gradients from '~/Gradients';
+
+
 
 interface TopicCardProps {
   topic: Topic;
   subjectId: string;
   isAdmin?: boolean;
+  index: number;
   onTakeQuiz: () => void;
   onViewDetails?: () => void;
 }
@@ -16,16 +20,27 @@ export const TopicCard: React.FC<TopicCardProps> = ({
   isAdmin,
   onTakeQuiz,
   onViewDetails,
+  index,
 }) => {
   // console.log(JSON.stringify(topic, null, 2));
   return (
-    <TouchableOpacity onPress={onViewDetails} className="mb-4">
-      <View className="flex-row items-center justify-between rounded-2xl bg-white p-3 shadow">
-        <View className="flex-1 flex-row items-center gap-4">
-          <View className='w-12 h-12 items-center justify-center rounded-xl bg-sky-400 shadow-lg shadow-blue-800'>
-            <Text className="text-2xl text-white">{topic.topicName[0]}</Text>
-          </View>
-          <Text className="text-xl font-semibold text-neutral-600 shadow-lg shadow-neutral-500">{topic.topicName}</Text>
+    <TouchableOpacity onPress={onViewDetails} className=" w-[48%]">
+      <View
+        // colors={Gradients[index % Gradients.length]}
+        className="flex-row rounded-2xl bg-white p-6 shadow overflow-hidden">
+        <View className="flex-1 items-center gap-2">
+          <LinearGradient
+            colors={Gradients[index % Gradients.length]}
+            className="h-14 w-14 items-center justify-center rounded-2xl shadow-lg shadow-neutral-800 overflow-hidden">
+            <Text className="text-3xl font-extrabold text-white">{topic.topicName[0]}</Text>
+          </LinearGradient>
+          <Text
+            className="text-center text-2xl font-bold text-neutral-800 shadow-lg shadow-neutral-500"
+            numberOfLines={1}
+            adjustsFontSizeToFit>
+            {topic.topicName}
+          </Text>
+          <Text className="text-sm text-neutral-600">{topic.stats?.totalQuestions} Questions</Text>
           {/* <View className="mt-1 flex-row flex-wrap gap-2">
             <Pressable
               onPress={onTakeQuiz}
