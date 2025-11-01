@@ -12,7 +12,22 @@
     },
     "plugins": [
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3904519861823527~9083587054",
+          "iosAppId": "ca-app-pub-3904519861823527~9083587054"
+        }
+      ]
     ],
     "orientation": "portrait",
     "scheme": "physioprep",
@@ -23,9 +38,7 @@
       "resizeMode": "cover",
       "backgroundColor": "#000000"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.darshanx01.physioprep"
