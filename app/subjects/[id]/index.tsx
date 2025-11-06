@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { View, ScrollView, Text, RefreshControl } from 'react-native';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import { useAuth } from 'hooks/useAuth';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useAuth } from '~/useAuth';
 import { Colors } from 'constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomHeader } from 'components/common/CustomHeader';
@@ -12,6 +12,12 @@ import { fetchSubjectAtom, loadingAtom, subjectAtom } from 'store/subject';
 import { SubjectDetailSkeleton } from 'components/skeletons/SubjectDetailSkeleton';
 import colors from 'tailwindcss/colors';
 import { ProgressBar } from '~/ProgressBar';
+import {
+  rewardedAdLoadedAtom,
+  initializeRewardedAdAtom,
+  loadRewardedAdAtom,
+  showRewardedAdAtom,
+} from 'store/rewardedAd';
 
 export default function SubjectDetailPage() {
   const { id } = useLocalSearchParams();
@@ -20,18 +26,27 @@ export default function SubjectDetailPage() {
   const [subject] = useAtom(subjectAtom);
   const [loading] = useAtom(loadingAtom);
   const fetchSubject = useSetAtom(fetchSubjectAtom);
-  const navigation = useNavigation();
 
-  useEffect(() => {
-    navigation.setOptions({
-      header: () => <CustomHeader title={subject?.name as string} showBack />,
-      headerShown: true,
-    });
-  }, [navigation, subject]);
+  // Use shared rewarded ad state
+  const [rewardedAdLoaded] = useAtom(rewardedAdLoadedAtom);
+  const initializeRewardedAd = useSetAtom(initializeRewardedAdAtom);
+  const loadRewardedAd = useSetAtom(loadRewardedAdAtom);
+  const showRewardedAd = useSetAtom(showRewardedAdAtom);
 
   useEffect(() => {
     if (id) fetchSubject(id as string, false);
   }, [id, fetchSubject]);
+
+  useEffect(() => {
+    // Initialize the shared rewarded ad
+    const cleanup = initializeRewardedAd();
+    return cleanup;
+  }, [initializeRewardedAd]);
+
+  useFocusEffect(() => {
+    // Load ad when screen comes into focus
+    loadRewardedAd();
+  });
 
   const onRefresh = () => {
     if (id) fetchSubject(id as string, true);
@@ -41,10 +56,15 @@ export default function SubjectDetailPage() {
     return <SubjectDetailSkeleton />;
   }
 
+  const handleSubjectQuiz = async () => {
+    await showRewardedAd();
+    router.push(`/subjects/${subject._id}/quiz`);
+  };
+
   // console.log('subject:',JSON.stringify(subject, null, 2));
 
   const progress =
-    (subject.userStats?.correctlyAnsweredQuestions ?? 0) / (subject.stats?.totalQuestions || 1 );
+    (subject.userStats?.correctlyAnsweredQuestions ?? 0) / (subject.stats?.totalQuestions || 1);
 
   // console.log(JSON.stringify(subject.topics, null, 2));
   return (
@@ -56,6 +76,8 @@ export default function SubjectDetailPage() {
         }
         contentContainerClassName="pb-32">
         {/* Subject Details Card */}
+
+        <CustomHeader title={subject?.name as string} showBack />
 
         <View className="mt-3 p-4">
           <View
@@ -103,24 +125,23 @@ export default function SubjectDetailPage() {
 
             <View className="mt-6 gap-2 ">
               <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-semibold text-neutral-800">Your Progress</Text>
+                <Text className="text-lg font-semibold text-neutral-800">Your Progress </Text>
                 <Text className="text-lg font-semibold text-neutral-800">
                   {Math.round(progress * 100)}%
                 </Text>
               </View>
-              <ProgressBar
-                value={Math.round(progress * 100)}
-                color={colors.green[400]}
-              />
+              <ProgressBar value={Math.round(progress * 100)} color={colors.green[400]} />
             </View>
             {/* Quiz/Test Buttons */}
             {/* <View className="mt-6 flex-row gap-4 "> */}
             <Button
-              title="Subject Quiz"
-              leftIcon="school-outline"
-              onPress={() => router.push(`/subjects/${subject._id}/quiz`)}
-              className="mt-6 flex-1 rounded-2xl bg-indigo-600/80 shadow-md"
+              title="Start The Quiz "
+              rightIcon="play-outline"
+              onPress={() => handleSubjectQuiz()}
+              className="mt-6 flex-1 rounded-2xl bg-lime-500 shadow-md"
               textClassName="text-white text-lg font-bold"
+              disabled={!rewardedAdLoaded}
+              loading={!rewardedAdLoaded}
             />
             {/* <Button
                 title="Comprehensive Test"
@@ -136,27 +157,26 @@ export default function SubjectDetailPage() {
         {/* Topics List */}
         <View className="px-6">
           <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-xl font-semibold text-neutral-800">Topics</Text>
+            <Text className="text-xl font-semibold text-neutral-800">Topics Covered</Text>
           </View>
           <View className="flex flex-row flex-wrap gap-3">
-
-          {subject.topics && subject.topics.length > 0 ? (
-            subject.topics.map((topic, index) => (
-              <TopicCard
-                key={topic._id}
-                index={index}
-                topic={topic}
-                subjectId={subject._id}
-                isAdmin={user?.role === 'admin'}
-                onTakeQuiz={() => router.push(`/topics/${topic._id}/quiz`)}
-                onViewDetails={() => router.push(`/topics/${topic._id}`)}
-              />
-            ))
-          ) : (
-            <Text className="mt-8 text-center text-foreground/60">
-              No topics found for this subject.
-            </Text>
-          )}
+            {subject.topics && subject.topics.length > 0 ? (
+              subject.topics.map((topic, index) => (
+                <TopicCard
+                  key={topic._id}
+                  index={index}
+                  topic={topic}
+                  subjectId={subject._id}
+                  isAdmin={user?.role === 'admin'}
+                  onTakeQuiz={() => router.push(`/topics/${topic._id}/quiz`)}
+                  onViewDetails={() => router.push(`/topics/${topic._id}`)}
+                />
+              ))
+            ) : (
+              <Text className="mt-8 text-center text-foreground/60">
+                No topics found for this subject.
+              </Text>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -169,17 +189,19 @@ const Chip = ({
   iconName,
   iconColor,
   label,
+  bgColor = 'bg-white/90',
+  textColor = 'text-neutral-700',
 }: {
   iconName: keyof typeof Ionicons.glyphMap;
   iconColor: string;
   label: string;
+  bgColor?: string;
+  textColor?: string;
 }) => {
   return (
-    <View
-      // experimentalBlurMethod="dimezisBlurView"
-      className="flex-row items-center rounded-xl bg-[#f9589e] px-2.5 py-2 shadow-2xl shadow-rose-500">
-      <Ionicons name={iconName} size={14} color={iconColor} />
-      <Text className="ml-2 text-xs text-neutral-50">{label}</Text>
+    <View className={`flex-row items-center gap-1.5 rounded-full ${bgColor} px-3 py-2 shadow-md`}>
+      <Ionicons name={iconName} size={16} color={iconColor} />
+      <Text className={`text-sm font-medium ${textColor}`}>{label}</Text>
     </View>
   );
 };

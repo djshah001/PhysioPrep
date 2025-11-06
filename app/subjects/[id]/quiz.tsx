@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { View, Text, ActivityIndicator, useWindowDimensions } from 'react-native';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { quizApi } from 'services/api';
 import { Button } from 'components/ui/button';
 import { useAtom } from 'jotai';
@@ -46,19 +46,9 @@ export default function SubjectQuizPage() {
   const elapsed = useRef(0);
   // Use a ref for start time to avoid re-rendering the whole screen every second
   const startTimeRef = useRef<number | null>(null);
-  const navigation = useNavigation();
   const [showJumpModal, setShowJumpModal] = useState(false);
   const explainRef = useRef<ActionSheetRef>(null);
   const { width } = useWindowDimensions();
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      header: () => (
-        <CustomHeader title={`${result ? 'Result Of The Quiz' : 'Subject Quiz'} `} showBack />
-      ),
-    });
-  }, [navigation, result]);
 
   // Fetch quiz
   useEffect(() => {
@@ -132,157 +122,160 @@ export default function SubjectQuizPage() {
   const q = quiz.questions[currentIndex];
   // console.log(q.explanationHtml);
   return (
-    <ScrollView contentContainerClassName=" bg-background p-4">
-      <QuizHeader
-        current={currentIndex}
-        total={quiz.questions.length}
-        startTime={startTimeRef.current}
-        elapsed={elapsed}
-      />
-      <View className="mb-4 rounded-2xl bg-white p-6 shadow">
-        <Text className="mb-2 text-lg font-bold text-primary">
-          Question {currentIndex + 1} / {quiz.questions.length}
-        </Text>
-
-        <Text className="mb-4 text-lg leading-6 text-neutral-800">{q.text}</Text>
-      </View>
-      {q.options.map((opt: { text: string; isCorrect: boolean }, idx: number) => (
-        <AnswerOption
-          key={idx}
-          text={opt.text}
-          selected={answers[currentIndex]?.selectedAnswer === idx}
-          correctAnswer={opt.isCorrect}
-          onPress={() =>
-            handleSelect(
-              idx,
-              answers,
-              currentIndex,
-              setAnswers,
-              explainRef as React.RefObject<ActionSheetRef>,
-              quiz
-            )
-          }
-          disabled={submitting || answers[currentIndex] != null}
+    <>
+      <CustomHeader title={`${result ? 'Result Of The Quiz' : 'Subject Quiz'} `} showBack />
+      <ScrollView contentContainerClassName=" bg-background p-4">
+        <QuizHeader
+          current={currentIndex}
+          total={quiz.questions.length}
+          startTime={startTimeRef.current}
+          elapsed={elapsed}
         />
-      ))}
+        <View className="mb-4 rounded-2xl bg-white p-6 shadow">
+          <Text className="mb-2 text-lg font-bold text-primary">
+            Question {currentIndex + 1} / {quiz.questions.length}
+          </Text>
 
-      <View className="mt-6 flex-row items-center justify-between">
-        <Button
-          title="Previous"
-          onPress={() => handlePrev(currentIndex, setCurrentIndex, quiz)}
-          disabled={currentIndex === 0 || submitting}
-          leftIcon="chevron-back-outline"
-          className="mx-2 rounded-2xl py-2"
-        />
-        {/* <Button
+          <Text className="mb-4 text-lg leading-6 text-neutral-800">{q.text}</Text>
+        </View>
+        {q.options.map((opt: { text: string; isCorrect: boolean }, idx: number) => (
+          <AnswerOption
+            key={idx}
+            text={opt.text}
+            selected={answers[currentIndex]?.selectedAnswer === idx}
+            correctAnswer={opt.isCorrect}
+            onPress={() =>
+              handleSelect(
+                idx,
+                answers,
+                currentIndex,
+                setAnswers,
+                explainRef as React.RefObject<ActionSheetRef>,
+                quiz
+              )
+            }
+            disabled={submitting || answers[currentIndex] != null}
+          />
+        ))}
+
+        <View className="mt-6 flex-row items-center justify-between">
+          <Button
+            title="Previous"
+            onPress={() => handlePrev(currentIndex, setCurrentIndex, quiz)}
+            disabled={currentIndex === 0 || submitting}
+            leftIcon="chevron-back-outline"
+            className="mx-2 rounded-2xl py-2"
+          />
+          {/* <Button
           title="Explain"
           onPress={() => actionSheetRef.current?.show()}
           disabled={answers[currentIndex] == null}
           className="mx-2 py-2"
         /> */}
-        <Button
-          title="Jump"
-          onPress={() => setShowJumpModal(true)}
-          disabled={submitting}
-          leftIcon="swap-horizontal-outline"
-          className="mx-2 rounded-2xl bg-indigo-500 py-2 shadow-xl shadow-indigo-800"
-        />
-        {currentIndex === quiz.questions.length - 1 ? (
           <Button
-            title={submitting ? 'Submitting...' : 'Submit'}
-            onPress={() =>
-              handleSubmit(
-                answers,
-                quiz,
-                setSubmitting,
-                setResult,
-                elapsed,
-                startTimeRef,
-                setShowSubmissionModal
-              )
-            }
-            disabled={submitting || answers.length < quiz.questions.length}
-            rightIcon="checkmark-outline"
-            className="justify-cente items-center rounded-2xl bg-green-500 p-4 py-3 shadow-xl shadow-green-800"
-            textClassName="mr-0"
-          />
-        ) : (
-          <Button
-            title="Next"
-            onPress={() => handleNext(currentIndex, setCurrentIndex, quiz)}
+            title="Jump"
+            onPress={() => setShowJumpModal(true)}
             disabled={submitting}
-            rightIcon="chevron-forward-outline"
-            className="items-center justify-center rounded-2xl p-4 py-2"
-            textClassName="mr-0"
+            leftIcon="swap-horizontal-outline"
+            className="mx-2 rounded-2xl bg-indigo-500 py-2 shadow-xl shadow-indigo-800"
           />
-        )}
-      </View>
-      <JumpToQuestionModal
-        visible={showJumpModal}
-        currentIndex={currentIndex}
-        totalQuestions={quiz.questions.length}
-        onJump={(idx) => handleJumpTo(idx, setCurrentIndex, setShowJumpModal)}
-        onClose={() => setShowJumpModal(false)}
-        submitting={submitting}
-      />
-      <SubmissionModal
-        visible={!!result && showSubmissionModal}
-        onClose={() => {
-          setShowSubmissionModal(false);
-          setShowReview(true); // Automatically show review after submission
-        }}
-        score={result?.score || 0}
-        total={result?.totalQuestions || 0}
-        time={elapsed.current}
-      />
-
-      <ActionSheet
-        ref={explainRef}
-        snapPoints={[50, 90]}
-        gestureEnabled
-        initialSnapIndex={1}
-        containerStyle={{
-          borderRadius: 16,
-          backgroundColor: '#fff',
-          shadowColor: '#000',
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-        }}>
-        <View className="px-4 pb-2 pt-3">
-          {/* Handle: uncomment if you want a visual grabber */}
-          {/* <View className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-300" /> */}
-          <View className="mb-2 flex-row items-center justify-between">
-            <Text className="text-lg font-bold text-neutral-900">Explanation</Text>
-            <Button title="Close" onPress={() => explainRef?.current?.hide()} />
-          </View>
+          {currentIndex === quiz.questions.length - 1 ? (
+            <Button
+              title={submitting ? 'Submitting...' : 'Submit'}
+              onPress={() =>
+                handleSubmit(
+                  answers,
+                  quiz,
+                  setSubmitting,
+                  setResult,
+                  elapsed,
+                  startTimeRef,
+                  setShowSubmissionModal
+                )
+              }
+              disabled={submitting || answers.length < quiz.questions.length}
+              rightIcon="checkmark-outline"
+              className="justify-cente items-center rounded-2xl bg-green-500 p-4 py-3 shadow-xl shadow-green-800"
+              textClassName="mr-0"
+            />
+          ) : (
+            <Button
+              title="Next"
+              onPress={() => handleNext(currentIndex, setCurrentIndex, quiz)}
+              disabled={submitting}
+              rightIcon="chevron-forward-outline"
+              className="items-center justify-center rounded-2xl p-4 py-2"
+              textClassName="mr-0"
+            />
+          )}
         </View>
-        <ScrollView contentContainerClassName="px-4 pb-6">
-          <RenderHTML
-            contentWidth={Math.max(320, width - 48)}
-            source={{ html: q.explanationHtml as string }}
-            customHTMLElementModels={customHTMLElementModels}
-            tagsStyles={tagsStyles}
-            systemFonts={['System']}
-            enableExperimentalMarginCollapsing
-            defaultTextProps={{ selectable: false }}
-            renderers={renderers}
-            renderersProps={{
-              img: { enableExperimentalPercentWidth: true },
-              table: {
-                tableStyleSpecs: {
-                  outerBorderWidthPx: 1,
-                  rowsBorderWidthPx: 1,
-                  columnsBorderWidthPx: 1,
-                  borderColor: '#e5e7eb',
-                  cellPaddingEm: 0.5,
-                  linkColor: '#3b82f6',
+        <JumpToQuestionModal
+          visible={showJumpModal}
+          currentIndex={currentIndex}
+          totalQuestions={quiz.questions.length}
+          onJump={(idx) => handleJumpTo(idx, setCurrentIndex, setShowJumpModal)}
+          onClose={() => setShowJumpModal(false)}
+          submitting={submitting}
+        />
+        <SubmissionModal
+          visible={!!result && showSubmissionModal}
+          onClose={() => {
+            setShowSubmissionModal(false);
+            setShowReview(true); // Automatically show review after submission
+          }}
+          score={result?.score || 0}
+          total={result?.totalQuestions || 0}
+          time={elapsed.current}
+        />
+
+        <ActionSheet
+          ref={explainRef}
+          snapPoints={[50, 90]}
+          gestureEnabled
+          initialSnapIndex={1}
+          containerStyle={{
+            borderRadius: 16,
+            backgroundColor: '#fff',
+            shadowColor: '#000',
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+          }}>
+          <View className="px-4 pb-2 pt-3">
+            {/* Handle: uncomment if you want a visual grabber */}
+            {/* <View className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-300" /> */}
+            <View className="mb-2 flex-row items-center justify-between">
+              <Text className="text-lg font-bold text-neutral-900">Explanation</Text>
+              <Button title="Close" onPress={() => explainRef?.current?.hide()} />
+            </View>
+          </View>
+          <ScrollView contentContainerClassName="px-4 pb-6">
+            <RenderHTML
+              contentWidth={Math.max(320, width - 48)}
+              source={{ html: q.explanationHtml as string }}
+              customHTMLElementModels={customHTMLElementModels}
+              tagsStyles={tagsStyles}
+              systemFonts={['System']}
+              enableExperimentalMarginCollapsing
+              defaultTextProps={{ selectable: false }}
+              renderers={renderers}
+              renderersProps={{
+                img: { enableExperimentalPercentWidth: true },
+                table: {
+                  tableStyleSpecs: {
+                    outerBorderWidthPx: 1,
+                    rowsBorderWidthPx: 1,
+                    columnsBorderWidthPx: 1,
+                    borderColor: '#e5e7eb',
+                    cellPaddingEm: 0.5,
+                    linkColor: '#3b82f6',
+                  },
                 },
-              },
-            }}
-          />
-        </ScrollView>
-        <View className="mb-40" />
-      </ActionSheet>
-    </ScrollView>
+              }}
+            />
+          </ScrollView>
+          <View className="mb-28" />
+        </ActionSheet>
+      </ScrollView>
+    </>
   );
 }

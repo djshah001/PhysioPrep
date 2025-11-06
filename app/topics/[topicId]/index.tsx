@@ -1,22 +1,15 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import {
   View,
   Text,
   ActivityIndicator,
   ScrollView,
-  Pressable,
-  Alert,
   useWindowDimensions,
 } from 'react-native';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { topicApi } from 'services/api';
-import { Button } from 'components/ui/button';
 import { CustomHeader } from 'components/common/CustomHeader';
-import { useAuth } from 'hooks/useAuth';
 import { Colors } from 'constants/Colors';
-import { handleError } from 'lib/utils';
-import { AxiosError } from 'axios';
 import { useAtom, useSetAtom } from 'jotai';
 import {
   topicDetailsAtom,
@@ -25,15 +18,18 @@ import {
   fetchTopicDetailsAtom,
 } from 'store/subject';
 import RenderHtml from 'react-native-render-html';
-import colors from 'tailwindcss/colors';
 import { customHTMLElementModels, renderers, tagsStyles } from 'lib/HtmlRenderers';
+import { Button } from '~/ui/button';
+import {
+  loadRewardedAdAtom,
+  rewardedAdLoadedAtom,
+  showRewardedAdAtom
+} from 'store/rewardedAd';
 
 export default function TopicDetailsPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const navigation = useNavigation();
-  const { id: subjectId, topicId } = useLocalSearchParams<{ id: string; topicId: string }>();
-  const { user } = useAuth();
+  const { topicId } = useLocalSearchParams<{ id: string; topicId: string }>();
 
   // Jotai atoms
   const [topic] = useAtom(topicDetailsAtom);
@@ -41,14 +37,10 @@ export default function TopicDetailsPage() {
   const [error] = useAtom(errorTopicDetailsAtom);
   const fetchTopicDetails = useSetAtom(fetchTopicDetailsAtom);
 
-  const isAdmin = user?.role === 'admin';
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      header: () => <CustomHeader title="Topic Details" showBack />,
-    });
-  }, [navigation]);
+  // Use shared rewarded ad state
+  const [rewardedAdLoaded] = useAtom(rewardedAdLoadedAtom);
+  const loadRewardedAd = useSetAtom(loadRewardedAdAtom);
+  const showRewardedAd = useSetAtom(showRewardedAdAtom);
 
   // Fetch topic details
   useEffect(() => {
@@ -56,47 +48,16 @@ export default function TopicDetailsPage() {
     fetchTopicDetails(topicId, false);
   }, [topicId, fetchTopicDetails]);
 
-  const handleTakeQuiz = () => {
+  const handleTakeQuiz = async () => {
     if (!topic) return;
+    await showRewardedAd();
     router.push(`/topics/${topic._id}/quiz`);
   };
-
-  const handleEdit = () => {
-    if (!topic) return;
-    router.push(`/subjects/${subjectId}/topics/${topic._id}/edit`);
-  };
-
-  const handleManageQuestions = () => {
-    if (!topic) return;
-    router.push({
-      pathname: `/subjects/${subjectId}/topics/${topic._id}/questions`,
-      params: { topicName: topic.topicName },
-    });
-  };
-
-  const handleDelete = () => {
-    if (!topic) return;
-
-    Alert.alert(
-      `Delete "${topic.topicName}"?`,
-      'This will delete the topic and all its questions. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await topicApi.delete(topic._id);
-              router.back();
-            } catch (err) {
-              handleError(err as AxiosError);
-            }
-          },
-        },
-      ]
-    );
-  };
+  
+  useFocusEffect(() => {
+    // Load ad when screen comes into focus
+    loadRewardedAd();
+  });
 
   // console.log(topic?.descriptionHtml);
 
@@ -133,6 +94,7 @@ export default function TopicDetailsPage() {
 
   return (
     <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
+      <CustomHeader title="Topic Details" showBack />
       <View className="p-6">
         {/* Topic Header */}
         <View className="mb-6 rounded-3xl bg-white p-6 shadow">
@@ -141,7 +103,7 @@ export default function TopicDetailsPage() {
               <Text className="mb-2 text-2xl font-bold text-neutral-800">{topic.topicName}</Text>
 
               {/* Status Badges */}
-              <View className="mb-3 flex-row items-center gap-2">
+              <View className="flex-row items-center gap-2">
                 <Text
                   className={`rounded-full px-3 py-1 text-xs font-bold ${
                     topic.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
@@ -166,12 +128,14 @@ export default function TopicDetailsPage() {
           {/* Action Buttons */}
           {/* <View className="flex-row gap-3"> */}
           <Button
-            title="Take Quiz"
+            title="Take Topic Quiz "
             onPress={handleTakeQuiz}
-            className="w-full rounded-xl bg-primary/10 py-3"
-            leftIcon="school-outline"
-            leftIconColor={colors.blue[600]}
-            textClassName="text-blue-600"
+            className="flex-1 rounded-2xl bg-indigo-600/80 shadow-md"
+            textClassName="text-white text-lg font-bold"
+            rightIcon="play-outline"
+            // leftIconColor={colors.blue[600]}
+            disabled={!rewardedAdLoaded}
+            loading={!rewardedAdLoaded}
           />
           {/* <Button
               title="Take Test"
@@ -239,35 +203,7 @@ export default function TopicDetailsPage() {
           </View>
         )}
 
-        {/* Admin Actions */}
-        {isAdmin && (
-          <View className="mb-6 gap-2 rounded-2xl bg-grey6 p-6 shadow">
-            <Text className="mb-4 text-lg font-semibold text-foreground">Admin Actions</Text>
-            <View className="gap-2 space-y-3">
-              <Pressable
-                onPress={handleEdit}
-                className="flex-row items-center rounded-xl bg-blue-100 p-4">
-                <Ionicons name="create-outline" size={20} color="#3B82F6" />
-                <Text className="ml-3 font-medium text-blue-700">Edit Topic</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={handleManageQuestions}
-                className="flex-row items-center rounded-xl bg-purple-100 p-4">
-                <Ionicons name="list-circle-outline" size={20} color="#8B5CF6" />
-                <Text className="ml-3 font-medium text-purple-700">Manage Questions</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={handleDelete}
-                className="flex-row items-center rounded-xl bg-red-100 p-4">
-                <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                <Text className="ml-3 font-medium text-red-700">Delete Topic</Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-
+        
         {/* Topic Metadata */}
         <View className="rounded-2xl bg-grey6 p-6 shadow">
           <Text className="mb-4 text-lg font-semibold text-foreground">Details</Text>

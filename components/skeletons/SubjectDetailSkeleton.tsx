@@ -3,6 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { cn } from 'lib/utils';
 import colors from 'tailwindcss/colors';
+import { CustomHeader } from '~/common/CustomHeader';
 
 const SkeletonBlock = ({ className }: { className?: string }) => (
   <View className={cn('animate-pulse rounded-md bg-card/50', className)} />
@@ -13,6 +14,7 @@ export const SubjectDetailSkeleton = () => {
     <View className="flex-1 bg-background">
       {/* Mock Header */}
       {/* <View className="h-14" /> */}
+      <CustomHeader title="Subject Name" showBack />
       <ScrollView className="flex-1" contentContainerClassName="p-4 pb-32">
         {/* Subject Details Card Skeleton */}
         <LinearGradient
@@ -39,10 +41,12 @@ export const SubjectDetailSkeleton = () => {
           </View>
 
           {/* Skeleton for TopicCards */}
-          <View className="mb-4 h-28 animate-pulse rounded-2xl bg-neutral-500" />
-          <View className="mb-4 h-28 animate-pulse rounded-2xl bg-neutral-500" />
-          <View className="mb-4 h-28 animate-pulse rounded-2xl bg-neutral-500" />
-          <View className="mb-4 h-28 animate-pulse rounded-2xl bg-neutral-500" />
+          <View className="flex-row gap-4 flex-wrap justify-center">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <SkeletonBlock key={i} className="h-40 w-44 rounded-xl" />
+            ))}
+          </View>
+          
         </View>
       </ScrollView>
     </View>

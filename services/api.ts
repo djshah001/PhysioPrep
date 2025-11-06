@@ -7,6 +7,8 @@ console.log('API_URL:', process.env.EXPO_PUBLIC_API_URL);
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL || 'https://physioprep-server-942466930755.us-south1.run.app/api';
 
+// const API_URL = 'http://10.205.33.169:5000/api';
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {

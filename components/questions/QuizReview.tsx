@@ -4,6 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import colors from 'tailwindcss/colors';
 
 import { Question, quizAnswerType } from 'types/types';
+import { CustomHeader } from '~/common/CustomHeader';
+import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
+import { useRef } from 'react';
+import { useForeground } from '~/useForground';
 
 interface QuizReviewProps {
   reviewQuestions: {
@@ -23,14 +27,22 @@ const formatSeconds = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+const adUnitId = __DEV__ ? TestIds.ADAPTIVE_BANNER : 'ca-app-pub-3904519861823527/4809014719';
+
 const QuizReview = ({ reviewQuestions, userAnswers, onBack, totalTime }: QuizReviewProps) => {
   // Calculate summary
   const correctCount = reviewQuestions.reduce((sum, q, i) => sum + (q.isCorrect ? 1 : 0), 0);
   const incorrectCount = reviewQuestions.length - correctCount;
   const score = Math.round((correctCount / reviewQuestions.length) * 100);
 
+  const bannerRef = useRef<BannerAd>(null);
+  useForeground(() => {
+    bannerRef.current?.load();
+  });
+
   return (
     <View className="flex-1 bg-background">
+      <CustomHeader title={` Result Of The Quiz`} showBack />
       <ScrollView className="  p-4">
         {/* Summary */}
         <View className="mb-6 flex-row items-center justify-between rounded-3xl bg-indigo-600 p-4 shadow-xl shadow-indigo-600">
@@ -52,18 +64,23 @@ const QuizReview = ({ reviewQuestions, userAnswers, onBack, totalTime }: QuizRev
                 Incorrect: <Text className="font-semibold">{incorrectCount}</Text>
               </Text>
             </View>
-            <View className="flex-row items-center">
+            <View className="mb-2 flex-row items-center">
               <Ionicons name="trophy-outline" size={18} color={colors.pink[400]} />
               <Text className="ml-2 text-base text-pink-400">
                 Score: <Text className="font-semibold ">{score}%</Text>
               </Text>
             </View>
+            <BannerAd ref={bannerRef} unitId={adUnitId} size={BannerAdSize.MEDIUM_RECTANGLE} />
           </View>
         </View>
+
         {/* Questions */}
         {reviewQuestions.map((qObj, idx) => {
           const q = qObj.question;
-          const userIdx = typeof qObj.userAnswer?.selectedAnswer === 'number' ? qObj.userAnswer.selectedAnswer : userAnswers[idx];
+          const userIdx =
+            typeof qObj.userAnswer?.selectedAnswer === 'number'
+              ? qObj.userAnswer.selectedAnswer
+              : userAnswers[idx];
           const correctIdx = q.options.findIndex((o) => o.isCorrect);
           const isCorrect = qObj.isCorrect ?? userIdx === correctIdx;
           return (

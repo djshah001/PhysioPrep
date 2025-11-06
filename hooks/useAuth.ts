@@ -31,7 +31,7 @@ export const useAuth = () => {
         storedToken && storedRefreshToken && storedUser && storedLoginState === 'true';
 
       if (hasValidAuth) {
-        console.log('Found stored authentication state'); // Debug log
+        // console.log('Found stored authentication state'); // Debug log
 
         // Set the API authorization header
         setToken(storedToken);
