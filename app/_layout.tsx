@@ -1,29 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import '../global.css';
 import { configureGoogleSignIn } from '../services/googleAuth';
-import { useAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { isLoggedInAtom, refreshTokenAtom, tokenAtom, userAtom } from '../store/auth';
 import { useAuth } from '~/useAuth';
 import { Platform, StatusBar } from 'react-native';
-import {
-  AppOpenAd,
-  BannerAd,
-  BannerAdSize,
-  TestIds,
-  AdEventType,
-} from 'react-native-google-mobile-ads';
+import MobileAds, { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { useForeground } from '~/useForground';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  appOpenAdLoadedAtom,
+  initializeAppOpenAdAtom,
+  showAppOpenAdOnFirstLaunchAtom,
+  showAppOpenAdOnForegroundAtom,
+} from '../store/appOpenAd';
 
 const adUnitId = __DEV__ ? TestIds.ADAPTIVE_BANNER : 'ca-app-pub-3904519861823527/4617728433';
-const appOpenAdUnitId = __DEV__ ? TestIds.APP_OPEN : 'ca-app-pub-3904519861823527/9830101639';
-
-const appOpenAd = AppOpenAd.createForAdRequest(appOpenAdUnitId, {
-  keywords: ['fashion', 'clothing'],
-});
 
 const RootLayout = () => {
   const [loaded, error] = useFonts({
@@ -40,52 +35,36 @@ const RootLayout = () => {
   const { loadStoredAuth } = useAuth();
 
   const bannerRef = useRef<BannerAd>(null);
-  const appOpenAdRef = useRef<AppOpenAd | null>(null);
-  const [isAdLoaded, setIsAdLoaded] = useState(false);
-  const isFirstLaunch = useRef(true);
+
+  // Use shared app open ad state
+  const [appOpenAdLoaded] = useAtom(appOpenAdLoadedAtom);
+  const initializeAppOpenAd = useSetAtom(initializeAppOpenAdAtom);
+  const showAppOpenAdOnFirstLaunch = useSetAtom(showAppOpenAdOnFirstLaunchAtom);
+  const showAppOpenAdOnForeground = useSetAtom(showAppOpenAdOnForegroundAtom);
+
+  useEffect(() => {
+    // Initialize AdMob asynchronously
+    MobileAds()
+      .initialize()
+      .then((adapterStatuses) => {
+        console.log('✅ AdMob initialized:', adapterStatuses);
+      })
+      .catch((error) => {
+        console.log('❌ AdMob initialization error:', error);
+      });
+  }, []);
 
   // Initialize app open ad
   useEffect(() => {
-    // Set up event listeners
-    const unsubscribeLoaded = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
-      console.log('App Open Ad loaded');
-      setIsAdLoaded(true);
-    });
-
-    const unsubscribeError = appOpenAd.addAdEventListener(AdEventType.ERROR, (error) => {
-      // console.log('App Open Ad error:', error);
-      setIsAdLoaded(false);
-    });
-
-    const unsubscribeClosed = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
-      // console.log('App Open Ad closed');
-      setIsAdLoaded(false);
-      // Load a new ad for next time
-      appOpenAd.load();
-    });
-
-    appOpenAdRef.current = appOpenAd;
-
-    // Load the initial ad
-    appOpenAd.load();
-
-    return () => {
-      unsubscribeLoaded();
-      unsubscribeError();
-      unsubscribeClosed();
-    };
-  }, []);
+    // Initialize the shared app open ad
+    const cleanup = initializeAppOpenAd();
+    return cleanup;
+  }, [initializeAppOpenAd]);
 
   // Show ad on first launch when loaded
   useEffect(() => {
-    if (isAdLoaded && isFirstLaunch.current && appOpenAdRef.current && hasValidAuth) {
-      // console.log('Showing App Open Ad on first launch');
-      isFirstLaunch.current = false;
-      appOpenAdRef.current.show().catch((error) => {
-        console.log('Error showing App Open Ad:', error);
-      });
-    }
-  }, [isAdLoaded, hasValidAuth]);
+    showAppOpenAdOnFirstLaunch(!!hasValidAuth);
+  }, [appOpenAdLoaded, hasValidAuth, showAppOpenAdOnFirstLaunch]);
 
   // Handle foreground events with useForeground hook
   useForeground(() => {
@@ -97,19 +76,7 @@ const RootLayout = () => {
     }
 
     // Handle app open ad
-    if (appOpenAdRef.current && hasValidAuth) {
-      if (isAdLoaded) {
-        console.log('Showing App Open Ad on foreground');
-        appOpenAdRef.current
-          ?.show()
-          .then(() => {
-            setIsAdLoaded(false);
-          })
-          .catch((error) => {
-            console.log('Error showing App Open Ad:', error);
-          });
-      }
-    }
+    showAppOpenAdOnForeground(!!hasValidAuth);
   });
 
   useEffect(() => {
