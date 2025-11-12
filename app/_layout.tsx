@@ -17,6 +17,7 @@ import {
   showAppOpenAdOnFirstLaunchAtom,
   showAppOpenAdOnForegroundAtom,
 } from '../store/appOpenAd';
+import { SheetProvider } from 'react-native-actions-sheet';
 
 const adUnitId = __DEV__ ? TestIds.ADAPTIVE_BANNER : 'ca-app-pub-3904519861823527/4617728433';
 
@@ -97,28 +98,30 @@ const RootLayout = () => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView className="flex-1 bg-background" edges={['bottom', 'left', 'right']}>
-        <StatusBar barStyle="dark-content" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Protected guard={hasValidAuth as boolean}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="subjects" />
-            <Stack.Screen name="topics/[topicId]" />
-            <Stack.Screen name="profile" />
-          </Stack.Protected>
-          <Stack.Protected guard={!hasValidAuth}>
-            <Stack.Screen name="login" />
-          </Stack.Protected>
-        </Stack>
-        {/* Only show banner ad when user is logged in */}
-        {hasValidAuth && (
-          <BannerAd
-            ref={bannerRef}
-            unitId={adUnitId}
-            size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-          />
-        )}
-      </SafeAreaView>
+      <SheetProvider>
+        <SafeAreaView className="flex-1 bg-background" edges={['bottom', 'left', 'right']}>
+          <StatusBar barStyle="dark-content" />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Protected guard={hasValidAuth as boolean}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="subjects" />
+              <Stack.Screen name="topics/[topicId]" />
+              <Stack.Screen name="profile" />
+            </Stack.Protected>
+            <Stack.Protected guard={!hasValidAuth}>
+              <Stack.Screen name="login" />
+            </Stack.Protected>
+          </Stack>
+          {/* Only show banner ad when user is logged in */}
+          {hasValidAuth && (
+            <BannerAd
+              ref={bannerRef}
+              unitId={adUnitId}
+              size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+            />
+          )}
+        </SafeAreaView>
+      </SheetProvider>
     </GestureHandlerRootView>
   );
 };

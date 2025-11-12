@@ -15,6 +15,8 @@ import ExplainSheet from '~/questions/ExplainSheet';
 import { Question } from 'types/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BentoHomeSkeleton from '~/skeletons/BentoHomeSkeleton';
+import ProButton from '../ui/ProButton';
+import ProUpgradeSheet from '../pro/ProUpgradeSheet';
 
 export default function BentoHome() {
   const router = useRouter();
@@ -22,6 +24,7 @@ export default function BentoHome() {
   const [loading, setLoading] = useState(true);
   const [dqVisible, setDqVisible] = useAtom(dailyQuestionVisibleAtom);
   const insets = useSafeAreaInsets();
+  const proUpgradeSheetRef = useRef<ActionSheetRef>(null);
 
   const run = async (isMounted: boolean) => {
     try {
@@ -133,6 +136,16 @@ export default function BentoHome() {
         </Animated.View>
       )}
 
+      {/* Pro Upgrade Button */}
+      <Animated.View entering={FadeInDown.delay(250).springify()} style={{ marginTop: 24 }}>
+        <ProButton
+          size="large"
+          text="Upgrade to Pro ✨"
+          // variant="secondary"
+          onPress={() => proUpgradeSheetRef.current?.show()}
+        />
+      </Animated.View>
+
       {/* Subjects performance */}
       <Animated.View entering={FadeInDown.delay(200).springify()} style={{ marginTop: 16 }}>
         <View className="mb-2 flex-row gap-1 ">
@@ -228,6 +241,8 @@ export default function BentoHome() {
       </Animated.View> */}
 
       <View className="h-32" />
+      {/* Pro Upgrade Sheet */}
+      <ProUpgradeSheet ref={proUpgradeSheetRef} />
     </ScrollView>
   );
 }
@@ -417,6 +432,8 @@ function DailyQuestionCard({ onClose }: { onClose: () => void }) {
         title="Explanation"
         html={state.question?.explanationHtml || ''}
       />
+
+      
     </>
   );
 }

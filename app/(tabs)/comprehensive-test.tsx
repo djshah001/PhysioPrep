@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { testApi } from 'services/api';
 import { Button } from 'components/ui/button';
 import AnswerOption from 'components/quiz/AnswerOption';
@@ -11,6 +11,8 @@ import { SimpleSelect } from 'components/ui/SimpleSelect';
 import TestReview from 'components/test/TestReview';
 import { useAtom } from 'jotai';
 import { testStateAtom } from 'store/comprehensive-test-strore';
+import { isProActiveAtom } from 'store/pro';
+import { SheetManager } from 'react-native-actions-sheet';
 
 export default function ComprehensiveTestPage() {
   const router = useRouter();
@@ -75,6 +77,16 @@ export default function ComprehensiveTestPage() {
       setLoading(false);
     }
   };
+
+  const [isProActive] = useAtom(isProActiveAtom);
+
+  useFocusEffect(() => {
+    if(!isProActive) {
+      SheetManager.show('pro-upgrade-sheet');
+    }
+  });
+  
+
   // Restore persisted session on mount
   useEffect(() => {
     try {

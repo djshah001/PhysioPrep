@@ -25,6 +25,12 @@ export interface User {
   role: 'user' | 'admin';
   isPremium: boolean;
   isPremiumActive: boolean;
+  // Pro subscription fields
+  isPro: boolean;
+  isProActive: boolean;
+  proExpiresAt: string | null;
+  proActivatedAt: string | null;
+  hasProAccess: boolean;
   isEmailVerified: boolean;
   preferences: UserPreferences;
   stats: UserStats;
