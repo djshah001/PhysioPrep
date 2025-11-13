@@ -1,18 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { View, Text, ActivityIndicator, ScrollView } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { testApi } from 'services/api';
 import { Button } from 'components/ui/button';
 import AnswerOption from 'components/quiz/AnswerOption';
 import QuizHeader from 'components/quiz/QuizHeader';
 import JumpToQuestionModal from 'components/quiz/JumpToQuestionModal';
 import { SimpleSelect } from 'components/ui/SimpleSelect';
+import { ActionSheetRef } from 'react-native-actions-sheet';
 
 import TestReview from 'components/test/TestReview';
 import { useAtom } from 'jotai';
 import { testStateAtom } from 'store/comprehensive-test-strore';
-import { isProActiveAtom } from 'store/pro';
-import { SheetManager } from 'react-native-actions-sheet';
+import { useProAccess } from 'hooks/useProAccess';
+import ProUpgradeSheet from 'components/pro/ProUpgradeSheet';
+import { RestrictAccess } from '../../components/pro/RestrictAccess';
 
 export default function ComprehensiveTestPage() {
   const router = useRouter();
@@ -38,6 +40,10 @@ export default function ComprehensiveTestPage() {
   const [configuring, setConfiguring] = useState(true);
 
   const [testState, setTestState] = useAtom(testStateAtom);
+  const proUpgradeSheetRef = useRef<ActionSheetRef>(null);
+
+  // Pro access hook
+  const { canAccessComprehensiveTests, loading: proLoading } = useProAccess();
 
   const getRemaining = () => {
     if (!startTimeMs) return timeLimitSec;
@@ -78,13 +84,8 @@ export default function ComprehensiveTestPage() {
     }
   };
 
-  const [isProActive] = useAtom(isProActiveAtom);
-
-  useFocusEffect(() => {
-    if(!isProActive) {
-      SheetManager.show('pro-upgrade-sheet');
-    }
-  });
+  // Check pro access when component mounts or user changes
+  const canAccess = canAccessComprehensiveTests();
   
 
   // Restore persisted session on mount
@@ -144,17 +145,28 @@ export default function ComprehensiveTestPage() {
     }
   };
 
-  if (loading) {
+  // Show loading state
+  if (loading || proLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator />
+      <View className="flex-1 items-center justify-center bg-neutral-100">
+        <ActivityIndicator size="large" color="#FF6B6B" />
+        <Text className="mt-4 text-neutral-800 text-center">
+          {proLoading ? 'Checking access...' : 'Loading...'}
+        </Text>
       </View>
+    );
+  }
+
+  // Show locked feature if user doesn't have pro access
+  if (!canAccess) {
+    return (
+      <RestrictAccess/>
     );
   }
 
   if (error) {
     return (
-      <View className="flex-1 items-center justify-center bg-background p-6">
+      <View className="flex-1 items-center justify-center bg-neutral-100 p-6">
         <Text className="mb-4 text-red-500">{error}</Text>
         <Button title="Back" onPress={() => router.back()} />
       </View>
@@ -194,9 +206,9 @@ export default function ComprehensiveTestPage() {
 
   if (configuring) {
     return (
-      <View className="flex-1 bg-background">
-        <ScrollView contentContainerClassName="flex-1 bg-background p-4">
-          <Text className="mb-4 text-2xl font-bold text-primary">Configure Comprehensive Test</Text>
+      <View className="flex-1 bg-neutral-50">
+        <ScrollView contentContainerClassName="flex-1 bg-neutral-50 p-4">
+          <Text className="mb-4 text-2xl font-bold text-rose-600">Configure Comprehensive Test</Text>
           <View className="mb-4 rounded-2xl bg-white p-4 shadow">
             <Text className="mb-2 text-base font-semibold text-neutral-600">
               Question Count (10 - 200)
@@ -207,7 +219,7 @@ export default function ComprehensiveTestPage() {
                 onPress={() => setConfigCount(Math.max(10, configCount - 10))}
                 className="mr-3"
               />
-              <Text className="mx-2 text-lg font-bold text-primary">{configCount}</Text>
+              <Text className="mx-2 text-lg font-bold text-rose-600">{configCount}</Text>
               <Button
                 title="+"
                 onPress={() => setConfigCount(Math.min(200, configCount + 10))}
@@ -225,7 +237,7 @@ export default function ComprehensiveTestPage() {
                 onPress={() => setConfigDuration(Math.max(30, configDuration - 10))}
                 className="mr-3"
               />
-              <Text className="mx-2 text-lg font-bold text-primary">{configDuration}</Text>
+              <Text className="mx-2 text-lg font-bold text-rose-600">{configDuration}</Text>
               <Button
                 title="+"
                 onPress={() => setConfigDuration(Math.min(300, configDuration + 10))}
@@ -269,7 +281,7 @@ export default function ComprehensiveTestPage() {
   const q = questions[currentIndex];
 
   return (
-    <ScrollView contentContainerClassName="bg-background p-4">
+    <ScrollView contentContainerClassName="bg-neutral-50 p-4">
       <QuizHeader
         current={currentIndex}
         total={questions.length}
@@ -339,6 +351,13 @@ export default function ComprehensiveTestPage() {
         }}
         onClose={() => setShowJumpModal(false)}
         submitting={submitting}
+      />
+
+      {/* Pro Upgrade Sheet for test interface */}
+      <ProUpgradeSheet
+        ref={proUpgradeSheetRef}
+        title="Upgrade to Pro"
+        subtitle="Unlock unlimited access to comprehensive tests and premium features"
       />
     </ScrollView>
   );
