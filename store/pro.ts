@@ -23,6 +23,9 @@ export interface ProStatus {
   premiumExpiry: Date | null;
 }
 
+//paymwnt process loading state
+export const paymentProcessingAtom = atom(false);
+
 // Pro features list atom
 export const proFeaturesAtom = atom<ProFeature[]>([]);
 

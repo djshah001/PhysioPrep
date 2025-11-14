@@ -8,6 +8,7 @@ import { CustomHeader } from '~/common/CustomHeader';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { useRef } from 'react';
 import { useForeground } from '~/useForground';
+import { useProAccess } from '../../hooks/useProAccess';
 
 interface QuizReviewProps {
   reviewQuestions: {
@@ -35,9 +36,13 @@ const QuizReview = ({ reviewQuestions, userAnswers, onBack, totalTime }: QuizRev
   const incorrectCount = reviewQuestions.length - correctCount;
   const score = Math.round((correctCount / reviewQuestions.length) * 100);
 
+  const { shouldShowAds } = useProAccess();
   const bannerRef = useRef<BannerAd>(null);
+
   useForeground(() => {
-    bannerRef.current?.load();
+    if (shouldShowAds()) {
+      bannerRef.current?.load();
+    }
   });
 
   return (
@@ -70,7 +75,9 @@ const QuizReview = ({ reviewQuestions, userAnswers, onBack, totalTime }: QuizRev
                 Score: <Text className="font-semibold ">{score}%</Text>
               </Text>
             </View>
-            <BannerAd ref={bannerRef} unitId={adUnitId} size={BannerAdSize.MEDIUM_RECTANGLE} />
+            {shouldShowAds() && (
+              <BannerAd ref={bannerRef} unitId={adUnitId} size={BannerAdSize.MEDIUM_RECTANGLE} />
+            )}
           </View>
         </View>
 

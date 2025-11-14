@@ -27,6 +27,13 @@
           "androidAppId": "ca-app-pub-3904519861823527~9083587054",
           "iosAppId": "ca-app-pub-3904519861823527~9083587054"
         }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "",
+          "enableGooglePay": true
+        }
       ]
     ],
     "orientation": "portrait",

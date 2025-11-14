@@ -18,11 +18,13 @@ import {
   showRewardedAdAtom,
 } from 'store/rewardedAd';
 import Chip from '~/ui/Chip';
+import { useProAccess } from '../../../hooks/useProAccess';
 
 export default function SubjectDetailPage() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { shouldShowAds } = useProAccess();
   const [subject] = useAtom(subjectAtom);
   const [loading] = useAtom(loadingAtom);
   const fetchSubject = useSetAtom(fetchSubjectAtom);
@@ -38,14 +40,18 @@ export default function SubjectDetailPage() {
   }, [id, fetchSubject]);
 
   useEffect(() => {
-    // Initialize the shared rewarded ad
-    const cleanup = initializeRewardedAd();
-    return cleanup;
-  }, [initializeRewardedAd]);
+    // Initialize the shared rewarded ad (only for non-Pro users)
+    if (shouldShowAds()) {
+      const cleanup = initializeRewardedAd();
+      return cleanup;
+    }
+  }, [initializeRewardedAd, shouldShowAds]);
 
   useFocusEffect(() => {
-    // Load ad when screen comes into focus
-    loadRewardedAd();
+    // Load ad when screen comes into focus (only for non-Pro users)
+    if (shouldShowAds()) {
+      loadRewardedAd();
+    }
   });
 
   const onRefresh = () => {
@@ -57,7 +63,10 @@ export default function SubjectDetailPage() {
   }
 
   const handleSubjectQuiz = async () => {
-    await showRewardedAd();
+    // Only show ad for non-Pro users
+    if (shouldShowAds()) {
+      await showRewardedAd();
+    }
     router.push(`/subjects/${subject._id}/quiz`);
   };
 
