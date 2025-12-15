@@ -19,6 +19,7 @@ import {
 } from 'store/rewardedAd';
 import Chip from '~/ui/Chip';
 import { useProAccess } from '../../../hooks/useProAccess';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function SubjectDetailPage() {
   const { id } = useLocalSearchParams();
@@ -115,7 +116,7 @@ export default function SubjectDetailPage() {
                 label={`${subject.stats?.totalTopics ?? 0} Topics`}
               />
 
-              <Chip
+              {/* <Chip
                 iconName="star"
                 iconColor={colors.yellow[400]}
                 label={`${subject.stats?.freeQuestions ?? 0} Free`}
@@ -124,7 +125,7 @@ export default function SubjectDetailPage() {
                 iconName="lock-closed"
                 iconColor={colors.blue[400]}
                 label={`${subject.stats?.premiumQuestions ?? 0} Premium`}
-              />
+              /> */}
               <Chip
                 iconName="checkmark-circle"
                 iconColor={colors.green[400]}
@@ -149,8 +150,8 @@ export default function SubjectDetailPage() {
               onPress={() => handleSubjectQuiz()}
               className="mt-6 flex-1 rounded-2xl bg-lime-500 shadow-md"
               textClassName="text-white text-lg font-bold"
-              disabled={!rewardedAdLoaded}
-              loading={!rewardedAdLoaded}
+              disabled={!rewardedAdLoaded && shouldShowAds()}
+              loading={!rewardedAdLoaded && shouldShowAds()}
             />
             {/* <Button
                 title="Comprehensive Test"
@@ -168,7 +169,7 @@ export default function SubjectDetailPage() {
           <View className="mb-4 flex-row items-center justify-between">
             <Text className="text-xl font-semibold text-neutral-800">Topics Covered</Text>
           </View>
-          <View className="flex flex-row flex-wrap gap-3">
+          <View className={`flex flex-row flex-wrap gap-3 justify-center`}>
             {subject.topics && subject.topics.length > 0 ? (
               subject.topics.map((topic, index) => (
                 <TopicCard
@@ -182,9 +183,20 @@ export default function SubjectDetailPage() {
                 />
               ))
             ) : (
-              <Text className="mt-8 text-center text-foreground/60">
-                No topics found for this subject.
-              </Text>
+              <View className="rounded-3xl bg-slate-50 p-6 shadow-lg shadow-neutral-700 items-center">
+                <View className="mb-4 rounded-full bg-blue-400 p-6 shadow-xl shadow-blue-400">
+                  <MaterialCommunityIcons
+                    name="book-remove-multiple-outline"
+                    size={48}
+                    color={colors.neutral[50]}
+                  />
+                </View>
+                <Text className="mb-2 text-2xl font-semibold text-neutral-800">No Topics Yet</Text>
+                <Text className="text-center text-base leading-relaxed text-neutral-500">
+                  This subject doesn&apost have any topics yet.{'\n'}
+                  Check back later for new content!
+                </Text>
+              </View>
             )}
           </View>
         </View>
@@ -193,5 +205,3 @@ export default function SubjectDetailPage() {
     </View>
   );
 }
-
-

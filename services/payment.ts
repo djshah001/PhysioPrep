@@ -36,6 +36,17 @@ export interface PaymentHistoryResponse {
   totalAmount: number;
 }
 
+export interface CancellationResponse {
+  message: string;
+  user: {
+    id: string;
+    isPro: boolean;
+    isProActive: boolean;
+    proActivatedAt: string;
+    proExpiresAt: string | null;
+  };
+}
+
 // Create a payment intent for Pro subscription
 export const createPaymentIntent = async (): Promise<PaymentIntentResponse> => {
   try {
@@ -82,6 +93,22 @@ export const getPaymentHistory = async (): Promise<PaymentHistoryResponse> => {
     return response.data.data;
   } catch (error) {
     console.error('Error fetching payment history:', error);
+    throw error;
+  }
+};
+
+// Cancel Pro subscription
+export const cancelProSubscription = async (): Promise<CancellationResponse> => {
+  try {
+    const response = await api.post('/stripe/cancel-subscription');
+
+    if (!response.data.success) {
+      throw new Error(response.data.errors?.[0]?.msg || 'Failed to cancel subscription');
+    }
+
+    return response.data.data;
+  } catch (error) {
+    console.error('Error cancelling subscription:', error);
     throw error;
   }
 };

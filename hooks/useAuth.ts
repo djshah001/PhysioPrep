@@ -61,6 +61,8 @@ export const useAuth = () => {
       const response = await api.post('/auth/login', { email, password });
       const { token, user, refreshToken } = response.data.data;
 
+      console.log('Login response:', JSON.stringify(response.data, null, 2)); // Debug log
+
       if (response.data.success) {
         await AsyncStorage.setItem('token', token);
         await AsyncStorage.setItem('refreshToken', refreshToken);
@@ -80,7 +82,7 @@ export const useAuth = () => {
       }
     } catch (error) {
       if (error instanceof AxiosError) {
-        console.error('Login error:', error.response?.data);
+        // console.error('Login error:', error.response?.data);
         throw error;
       }
       throw error;

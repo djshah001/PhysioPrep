@@ -1,13 +1,6 @@
 import React from 'react';
-import { View, Text, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useSetAtom } from 'jotai';
-import { BlurView } from 'expo-blur';
-import { useRouter } from 'expo-router';
+import { View, Text } from 'react-native';
 import { Question } from 'types/types';
-import { Colors } from 'constants/Colors';
-import { deleteQuestionAtom } from 'store/question';
-import { useAuth } from 'hooks/useAuth';
 
 interface QuestionCardProps {
   question: Question;
@@ -15,10 +8,6 @@ interface QuestionCardProps {
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({ question, index }) => {
-  const { user } = useAuth();
-  const router = useRouter();
-  const deleteQuestion = useSetAtom(deleteQuestionAtom);
-
   return (
     <View className="mb-4 rounded-xl bg-card p-4 shadow-md">
       <View className="flex-row justify-between">

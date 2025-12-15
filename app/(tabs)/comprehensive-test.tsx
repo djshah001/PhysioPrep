@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { View, Text, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { testApi } from 'services/api';
 import { Button } from 'components/ui/button';
@@ -15,6 +15,8 @@ import { testStateAtom } from 'store/comprehensive-test-strore';
 import { useProAccess } from 'hooks/useProAccess';
 import ProUpgradeSheet from 'components/pro/ProUpgradeSheet';
 import { RestrictAccess } from '../../components/pro/RestrictAccess';
+import { customHTMLElementModels, renderers, tagsStyles } from 'lib/HtmlRenderers';
+import RenderHTML from 'react-native-render-html';
 
 export default function ComprehensiveTestPage() {
   const router = useRouter();
@@ -86,7 +88,6 @@ export default function ComprehensiveTestPage() {
 
   // Check pro access when component mounts or user changes
   const canAccess = canAccessComprehensiveTests();
-  
 
   // Restore persisted session on mount
   useEffect(() => {
@@ -145,12 +146,14 @@ export default function ComprehensiveTestPage() {
     }
   };
 
+  const { width } = useWindowDimensions();
+
   // Show loading state
   if (loading || proLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-neutral-100">
         <ActivityIndicator size="large" color="#FF6B6B" />
-        <Text className="mt-4 text-neutral-800 text-center">
+        <Text className="mt-4 text-center text-neutral-800">
           {proLoading ? 'Checking access...' : 'Loading...'}
         </Text>
       </View>
@@ -159,9 +162,7 @@ export default function ComprehensiveTestPage() {
 
   // Show locked feature if user doesn't have pro access
   if (!canAccess) {
-    return (
-      <RestrictAccess/>
-    );
+    return <RestrictAccess />;
   }
 
   if (error) {
@@ -208,7 +209,9 @@ export default function ComprehensiveTestPage() {
     return (
       <View className="flex-1 bg-neutral-50">
         <ScrollView contentContainerClassName="flex-1 bg-neutral-50 p-4">
-          <Text className="mb-4 text-2xl font-bold text-rose-600">Configure Comprehensive Test</Text>
+          <Text className="mb-4 text-2xl font-bold text-rose-600">
+            Configure Comprehensive Test
+          </Text>
           <View className="mb-4 rounded-2xl bg-white p-4 shadow">
             <Text className="mb-2 text-base font-semibold text-neutral-600">
               Question Count (10 - 200)
@@ -296,7 +299,20 @@ export default function ComprehensiveTestPage() {
         <Text className="mb-2 text-lg font-bold text-neutral-800">
           Question {currentIndex + 1} / {questions.length}
         </Text>
-        <Text className="mb-4 text-lg leading-6 text-blue-400">{q.text}</Text>
+        {/* <Text className="mb-4 text-lg leading-6 text-blue-400">{q.text}</Text> */}
+        <RenderHTML
+          contentWidth={width - 48} // Account for padding
+          source={{ html: q.textHtml as string }}
+          customHTMLElementModels={customHTMLElementModels}
+          renderers={renderers}
+          tagsStyles={tagsStyles}
+          systemFonts={['System']}
+          enableExperimentalMarginCollapsing
+          defaultTextProps={{ selectable: false }}
+          renderersProps={{
+            img: { enableExperimentalPercentWidth: true },
+          }}
+        />
       </View>
       {q.options.map((opt: any, idx: number) => (
         <AnswerOption

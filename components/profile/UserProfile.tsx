@@ -6,6 +6,7 @@ import {
   Alert,
   RefreshControl,
   Image,
+  TouchableOpacity,
 } from 'react-native';
 import { Button } from '../ui/button';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,9 +23,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useAuth } from '../../hooks/useAuth';
-import { useUser } from '../../store/auth';
+import { useAtom } from 'jotai';
+import { userAtom, isLoggedInAtom } from '../../store/auth';
+import { proStatusAtom } from '../../store/pro';
+import { useProAccess } from '../../hooks/useProAccess';
+import { cancelProSubscription, getPaymentHistory } from '../../services/payment';
 import api from '../../services/api';
-import colors from 'tailwindcss/colors';
 
 interface ProfileStats {
   totalQuizzesTaken: number;
@@ -80,18 +84,38 @@ const StatsCard = ({
   );
 };
 
-// Utility function
+// Utility functions
 const formatDate = (d: string | null) => (d ? new Date(d).toLocaleDateString() : 'Never');
+
+const formatMemberSince = (d: string | null) => {
+  if (!d) return 'Unknown';
+  const date = new Date(d);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long'
+  });
+};
+
+const calculateDaysSince = (d: string | null) => {
+  if (!d) return 0;
+  const date = new Date(d);
+  const now = new Date();
+  return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+};
 
 // Profile Header Component
 const ProfileHeader = ({
   user,
-  premiumStatus,
-  onClose,
+  proInfo,
 }: {
   user: any;
-  premiumStatus: { text: string; color: string };
-  onClose: () => void;
+  proInfo: {
+    hasProAccess: boolean;
+    isPro: boolean;
+    isProActive: boolean;
+    proExpiresAt: Date | null;
+    showUpgradePrompt: boolean;
+  };
 }) => {
   const headerScale = useSharedValue(0);
   const avatarRotation = useSharedValue(0);
@@ -118,21 +142,10 @@ const ProfileHeader = ({
       {/* transform applied to this inner Animated.View (no entering on this one) */}
       <Animated.View style={headerAnimatedStyle}>
         <LinearGradient
-          colors={['#1F2937', '#374151', '#4B5563']}
+          colors={['#374151', '#4B5563', '#6B7280']}
           className="rounded-3xl p-4 shadow-2xl overflow-hidden"
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}>
-          {/* Header with close button */}
-          {/* <View className="mb-6 flex-row items-center justify-between">
-            <Text className="text-xl font-bold text-white">Profile</Text>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Close profile"
-              onPress={onClose}
-              className="h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-gray-800/50">
-              <Ionicons name="close" size={20} color="white" />
-            </TouchableOpacity>
-          </View> */}
 
           {/* User Info */}
           <View className="flex-row items-center">
@@ -154,23 +167,38 @@ const ProfileHeader = ({
 
             <View className="flex-1">
               <Text className="mb-1 text-2xl font-bold text-white">{user?.name || 'User'}</Text>
-              <Text className="mb-3 text-base text-gray-300">{user?.email}</Text>
+              <Text className="mb-1 text-base text-neutral-300">{user?.email}</Text>
+              <Text className="mb-3 text-sm text-neutral-400">
+                Member since {formatMemberSince(user?.createdAt)}
+              </Text>
 
               <View className="flex-row flex-wrap items-center">
-                <View
-                  className="mb-2 mr-3 rounded-full px-4 py-2"
-                  style={{ backgroundColor: `${premiumStatus.color}20` }}>
-                  <Text style={{ color: premiumStatus.color }} className="text-sm font-semibold">
-                    {premiumStatus.text}
-                  </Text>
-                </View>
+                {/* Pro Status Badge */}
+                {proInfo.hasProAccess ? (
+                  <View className="mb-2 mr-3 rounded-full bg-rose-500/20 px-4 py-2">
+                    <Text className="text-sm font-semibold text-rose-400">Pro Active</Text>
+                  </View>
+                ) : (
+                  <View className="mb-2 mr-3 rounded-full bg-neutral-500/20 px-4 py-2">
+                    <Text className="text-sm font-semibold text-neutral-400">Free</Text>
+                  </View>
+                )}
 
+                {/* Google OAuth Badge */}
+                {user?.provider === 'google' && (
+                  <View className="mb-2 mr-3 rounded-full bg-blue-500/20 px-4 py-2">
+                    <Text className="text-sm font-semibold text-blue-400">Google</Text>
+                  </View>
+                )}
+
+                {/* Admin Badge */}
                 {user?.role === 'admin' && (
-                  <View className="mb-2 rounded-full bg-purple-500/20 px-4 py-2">
+                  <View className="mb-2 mr-3 rounded-full bg-purple-500/20 px-4 py-2">
                     <Text className="text-sm font-semibold text-purple-400">Admin</Text>
                   </View>
                 )}
 
+                {/* Email Verified Badge */}
                 {user?.isEmailVerified && (
                   <View className="mb-2 rounded-full bg-green-500/20 px-4 py-2">
                     <Text className="text-sm font-semibold text-green-400">Verified</Text>
@@ -180,12 +208,23 @@ const ProfileHeader = ({
             </View>
           </View>
 
-          {/* Premium Expiry */}
-          {user?.isPremium && user?.premiumExpiry && (
-            <View className="mt-4 border-t border-gray-600/50 pt-4">
-              <Text className="text-sm text-gray-400">
-                Premium expires: {formatDate(user.premiumExpiry)}
-              </Text>
+          {/* Pro Subscription Details */}
+          {proInfo.hasProAccess && user?.proActivatedAt && (
+            <View className="mt-4 border-t border-neutral-600/50 pt-4">
+              <View className="flex-row items-center justify-between">
+                <View>
+                  <Text className="text-sm font-medium text-white">Pro Subscription</Text>
+                  <Text className="text-xs text-neutral-400">
+                    Activated {formatDate(user.proActivatedAt)} • Lifetime Access
+                  </Text>
+                  <Text className="text-xs text-neutral-400">
+                    {calculateDaysSince(user.proActivatedAt)} days active
+                  </Text>
+                </View>
+                <View className="h-8 w-8 items-center justify-center rounded-full bg-rose-500/20">
+                  <Ionicons name="star" size={16} color="#FB7185" />
+                </View>
+              </View>
             </View>
           )}
         </LinearGradient>
@@ -197,33 +236,30 @@ const ProfileHeader = ({
 export default function UserProfile() {
   const router = useRouter();
   const { logout, updateUser } = useAuth();
-  const [user, setUser] = useUser();
+  const [user, setUser] = useAtom(userAtom);
+  const [proStatus, setProStatus] = useAtom(proStatusAtom);
+  const { getProAccessInfo } = useProAccess();
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [cancellationLoading, setCancellationLoading] = useState(false);
   const scale = useSharedValue(1);
 
-  const [prefs, setPrefs] = useState({
-    notifications: user?.preferences?.notifications ?? true,
-    dailyReminder: user?.preferences?.dailyReminder ?? false,
-    theme: (user?.preferences?.theme as 'light' | 'dark' | 'auto') ?? 'auto',
-  });
+  // Get Pro access information
+  const proInfo = getProAccessInfo();
 
-  const applyPrefsUpdate = async (partial: Partial<typeof prefs>) => {
-    const prev = prefs;
-    const next = { ...prefs, ...partial };
-    setPrefs(next);
-    try {
-      setSavingPrefs(true);
-      await updateUser({ preferences: next } as any);
-    } catch {
-      setPrefs(prev);
-      Alert.alert('Update failed', 'Could not update preferences. Please try again.');
-    } finally {
-      setSavingPrefs(false);
-    }
+  // Calculate cancellation eligibility
+  const canCancelSubscription = () => {
+    if (!proInfo.hasProAccess || !user?.proActivatedAt) return false;
+    const daysSinceActivation = calculateDaysSince(user.proActivatedAt);
+    return daysSinceActivation <= 5;
+  };
+
+  const daysRemainingForCancellation = () => {
+    if (!user?.proActivatedAt) return 0;
+    const daysSinceActivation = calculateDaysSince(user.proActivatedAt);
+    return Math.max(0, 5 - daysSinceActivation);
   };
 
   useEffect(() => {
@@ -240,11 +276,20 @@ export default function UserProfile() {
         const fresh = res.data.data;
         setStats(fresh?.stats || null);
         setUser(fresh);
-        setPrefs({
-          notifications: fresh?.preferences?.notifications ?? true,
-          dailyReminder: fresh?.preferences?.dailyReminder ?? false,
-          theme: (fresh?.preferences?.theme as 'light' | 'dark' | 'auto') ?? 'auto',
-        });
+
+        // Update Pro status atom with fresh data
+        if (fresh) {
+          setProStatus({
+            isPro: fresh.isPro || false,
+            isProActive: fresh.isPro || false,
+            proExpiresAt: fresh.proExpiresAt ? new Date(fresh.proExpiresAt) : null,
+            proActivatedAt: fresh.proActivatedAt ? new Date(fresh.proActivatedAt) : null,
+            hasProAccess: fresh.isPro || false,
+            isPremium: fresh.isPremium || false,
+            isPremiumActive: fresh.isPremiumActive || false,
+            premiumExpiry: fresh.premiumExpiry ? new Date(fresh.premiumExpiry) : null,
+          });
+        }
       } else {
         setError('Failed to load profile');
       }
@@ -256,16 +301,71 @@ export default function UserProfile() {
     }
   };
 
+  // Handle Pro subscription cancellation
+  const handleCancelSubscription = async () => {
+    Alert.alert(
+      'Cancel Pro Subscription',
+      `Are you sure you want to cancel your Pro subscription? This action cannot be undone.\n\nYou have ${daysRemainingForCancellation()} day(s) remaining to cancel.`,
+      [
+        {
+          text: 'Keep Pro',
+          style: 'cancel',
+        },
+        {
+          text: 'Cancel Subscription',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setCancellationLoading(true);
+              const result = await cancelProSubscription();
+
+              // Immediately update atoms to revoke Pro access
+              setProStatus({
+                isPro: false,
+                isProActive: false,
+                proExpiresAt: new Date(),
+                proActivatedAt: user?.proActivatedAt ? new Date(user.proActivatedAt) : null,
+                hasProAccess: false,
+                isPremium: false,
+                isPremiumActive: false,
+                premiumExpiry: null,
+              });
+
+              // Update user atom
+              if (user) {
+                setUser({
+                  ...user,
+                  isPro: false,
+                  isProActive: false,
+                  proExpiresAt: new Date().toISOString(),
+                });
+              }
+
+              Alert.alert(
+                'Subscription Cancelled',
+                'Your Pro subscription has been successfully cancelled. You now have access to free features only.',
+                [{ text: 'OK' }]
+              );
+            } catch (error: any) {
+              console.error('Cancellation error:', error);
+              Alert.alert(
+                'Cancellation Failed',
+                error.message || 'Failed to cancel subscription. Please try again.',
+                [{ text: 'OK' }]
+              );
+            } finally {
+              setCancellationLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchUserProfile();
     setRefreshing(false);
-  };
-
-  const getPremiumStatus = () => {
-    if (!user?.isPremium) return { text: 'Free', color: '#6B7280' as const };
-    if (user.isPremiumActive) return { text: 'Premium Active', color: '#10B981' as const };
-    return { text: 'Premium Expired', color: '#EF4444' as const };
   };
 
   const buttonAnimatedStyle = useAnimatedStyle(() => ({
@@ -280,7 +380,7 @@ export default function UserProfile() {
     scale.value = withSpring(1);
   };
 
-  const premiumStatus = getPremiumStatus();
+
 
   // Enhanced logout handler with confirmation
   const handleLogout = () => {
@@ -349,7 +449,7 @@ export default function UserProfile() {
   // console.log(JSON.stringify(user, null, 2));
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-neutral-50">
       <ScrollView
         className="flex-1"
         contentContainerClassName="pb-32"
@@ -357,8 +457,8 @@ export default function UserProfile() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#FF6B6B"
-            colors={['#FF6B6B']}
+            tintColor="#FB7185"
+            colors={['#FB7185']}
           />
         }
         showsVerticalScrollIndicator={false}>
@@ -388,7 +488,71 @@ export default function UserProfile() {
           ) : (
             <>
               {/* Profile Header */}
-              <ProfileHeader user={user} premiumStatus={premiumStatus} onClose={() => router.back()} />
+              <ProfileHeader user={user} proInfo={proInfo} />
+
+          {/* Pro Subscription Management Section */}
+          {proInfo.hasProAccess && (
+            <Animated.View entering={FadeInDown.delay(200).springify()} className="mb-6">
+              <Text className="mb-4 text-xl font-bold text-neutral-800">Pro Subscription</Text>
+              <LinearGradient
+                colors={['#FB7185', '#F43F5E', '#E11D48']}
+                className="rounded-2xl p-5 shadow-lg overflow-hidden"
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}>
+                <View className="mb-4 flex-row items-center justify-between">
+                  <View>
+                    <Text className="text-lg font-bold text-white">Pro Active</Text>
+                    <Text className="text-sm text-white/80">Lifetime Access</Text>
+                  </View>
+                  <View className="h-12 w-12 items-center justify-center rounded-full bg-white/20">
+                    <Ionicons name="star" size={24} color="white" />
+                  </View>
+                </View>
+
+                {user?.proActivatedAt && (
+                  <View className="mb-4">
+                    <Text className="text-sm text-white/80">
+                      Activated: {formatDate(user.proActivatedAt)}
+                    </Text>
+                    <Text className="text-sm text-white/80">
+                      Active for {calculateDaysSince(user.proActivatedAt)} days
+                    </Text>
+                  </View>
+                )}
+
+                <View className="flex-row gap-3">
+                  <Button
+                    title="Payment History"
+                    onPress={() => router.push('/profile/payment-history' as any)}
+                    className="flex-1 rounded-xl bg-white/20 p-3"
+                    textClassName="text-sm font-medium text-white"
+                    leftIcon="receipt-outline"
+                    leftIconSize={16}
+                    leftIconColor="white"
+                  />
+
+                  {canCancelSubscription() && (
+                    <Button
+                      title={`Cancel (${daysRemainingForCancellation()}d left)`}
+                      onPress={handleCancelSubscription}
+                      disabled={cancellationLoading}
+                      className="flex-1 rounded-xl bg-white/20 p-3"
+                      textClassName="text-sm font-medium text-white"
+                      leftIcon="close-circle-outline"
+                      leftIconSize={16}
+                      leftIconColor="white"
+                    />
+                  )}
+                </View>
+
+                {cancellationLoading && (
+                  <View className="mt-3 flex-row items-center justify-center">
+                    <Text className="text-sm text-white/80">Processing cancellation...</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            </Animated.View>
+          )}
 
           {/* Enhanced Statistics Section */}
           <Animated.View entering={FadeInDown.delay(300).springify()} className="mb-6">
@@ -416,14 +580,14 @@ export default function UserProfile() {
               <StatsCard
                 title="Tests Taken"
                 value={stats?.totalTestsTaken ?? user?.stats?.totalTestsTaken ?? 0}
-                colors={['#22D3EE', '#06B6D4']}
+                colors={['#06B6D4', '#0891B2']}
                 icon="document-text-outline"
                 delay={200}
               />
               <StatsCard
                 title="Average Score"
                 value={`${Math.round((stats?.averageScore ?? user?.stats?.averageScore ?? 0) as number)}%`}
-                colors={['#6366F1', '#8B5CF6']}
+                colors={['#8B5CF6', '#7C3AED']}
                 icon="trophy-outline"
                 delay={300}
               />
@@ -444,131 +608,14 @@ export default function UserProfile() {
               <StatsCard
                 title="Total Answered"
                 value={stats?.totalQuestionsAnswered ?? user?.stats?.totalQuestionsAnswered ?? 0}
-                colors={['#A78BFA', '#7C3AED']}
+                colors={['#A855F7', '#9333EA']}
                 icon="help-circle-outline"
                 delay={600}
               />
             </View>
           </Animated.View>
 
-          {/* Enhanced Preferences Section */}
-          {/* <Animated.View entering={FadeInDown.delay(400).springify()} className="mb-6">
-            <Text className="mb-4 text-xl font-bold text-neutral-800">Preferences</Text>
-            <LinearGradient
-              colors={['#1F2937', '#374151', '#4B5563']}
-              className="rounded-2xl p-5 shadow-lg"
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}> */}
-              {/* Notifications Toggle */}
-              {/* <Animated.View
-                entering={SlideInRight.delay(100)}
-                className="mb-5 flex-row items-center justify-between rounded-xl bg-black/10 p-3">
-                <View className="flex-1 flex-row items-center">
-                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
-                    <Ionicons name="notifications-outline" size={20} color="#60A5FA" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="font-semibold text-white">Push Notifications</Text>
-                    <Text className="text-sm text-gray-400">Get notified about new content</Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: !!prefs.notifications }}
-                  disabled={savingPrefs}
-                  onPress={() => applyPrefsUpdate({ notifications: !prefs.notifications })}
-                  className={`h-8 w-14 rounded-full p-1 ${prefs.notifications ? 'bg-green-500' : 'bg-gray-600'}`}>
-                  <Animated.View
-                    className={`h-6 w-6 rounded-full bg-white shadow-lg ${prefs.notifications ? 'ml-6' : 'ml-0'}`}
-                    style={{
-                      transform: [{ translateX: prefs.notifications ? 0 : 0 }],
-                    }}
-                  />
-                </TouchableOpacity>
-              </Animated.View> */}
 
-              {/* Daily Reminder Toggle */}
-              {/* <Animated.View
-                entering={SlideInRight.delay(200)}
-                className="mb-5 flex-row items-center justify-between rounded-xl bg-black/10 p-3">
-                <View className="flex-1 flex-row items-center">
-                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-orange-500/20">
-                    <Ionicons name="alarm-outline" size={20} color="#FB923C" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="font-semibold text-white">Daily Reminder</Text>
-                    <Text className="text-sm text-gray-400">Daily study reminders</Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: !!prefs.dailyReminder }}
-                  disabled={savingPrefs}
-                  onPress={() => applyPrefsUpdate({ dailyReminder: !prefs.dailyReminder })}
-                  className={`h-8 w-14 rounded-full p-1 ${prefs.dailyReminder ? 'bg-green-500' : 'bg-gray-600'}`}>
-                  <Animated.View
-                    className={`h-6 w-6 rounded-full bg-white shadow-lg ${prefs.dailyReminder ? 'ml-6' : 'ml-0'}`}
-                    style={{
-                      transform: [{ translateX: prefs.dailyReminder ? 0 : 0 }],
-                    }}
-                  />
-                </TouchableOpacity>
-              </Animated.View> */}
-
-              {/* Theme Selection */}
-              {/* <Animated.View entering={SlideInRight.delay(300)} className="mb-2">
-                <View className="mb-3 flex-row items-center">
-                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-purple-500/20">
-                    <Ionicons name="color-palette-outline" size={20} color="#A78BFA" />
-                  </View>
-                  <View>
-                    <Text className="font-semibold text-white">Theme</Text>
-                    <Text className="text-sm text-gray-400">Choose your preferred theme</Text>
-                  </View>
-                </View>
-
-                <View className="flex-row rounded-xl bg-black/20 p-1">
-                  {(['auto', 'light', 'dark'] as const).map((t) => (
-                    <TouchableOpacity
-                      key={t}
-                      disabled={savingPrefs}
-                      onPress={() => applyPrefsUpdate({ theme: t })}
-                      className={`flex-1 rounded-lg py-3 ${prefs.theme === t ? 'bg-white/10 shadow-lg' : ''}`}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: prefs.theme === t }}
-                      accessibilityLabel={`Set theme to ${t}`}>
-                      <View className="items-center">
-                        <Ionicons
-                          name={
-                            t === 'auto'
-                              ? 'phone-portrait-outline'
-                              : t === 'light'
-                                ? 'sunny-outline'
-                                : 'moon-outline'
-                          }
-                          size={20}
-                          color={prefs.theme === t ? '#FFFFFF' : '#9CA3AF'}
-                        />
-                        <Text
-                          className={`mt-1 text-center text-sm ${prefs.theme === t ? 'font-semibold text-white' : 'text-gray-400'}`}>
-                          {t.charAt(0).toUpperCase() + t.slice(1)}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </Animated.View> */}
-
-              {/* {savingPrefs && (
-                <Animated.View
-                  entering={FadeInUp}
-                  className="mt-3 flex-row items-center justify-center rounded-lg bg-blue-500/10 p-2">
-                  <ActivityIndicator size="small" color="#60A5FA" />
-                  <Text className="ml-2 text-sm text-blue-400">Saving preferences...</Text>
-                </Animated.View>
-              )}
-            </LinearGradient>
-          </Animated.View> */}
 
           {/* Enhanced Account Section */}
           <Animated.View entering={FadeInDown.delay(500).springify()} className="mb-6">
@@ -615,8 +662,9 @@ export default function UserProfile() {
                 onPress={handleLogout}
                 className="flex-row items-center justify-center rounded-2xl border-2 border-red-500/30 bg-red-500 p-5 shadow-lg"
                 textClassName="text-lg font-bold text-red-100"
-                // leftIcon={<Ionicons name="log-out-outline" size={24} color={colors.red[100]} />}
-                rightIcon={<Ionicons name="exit-outline" size={18} color={colors.red[100]} />}
+                rightIcon="exit-outline"
+                rightIconSize={18}
+                rightIconColor="#FEE2E2"
               />
             </Animated.View>
           </Animated.View>

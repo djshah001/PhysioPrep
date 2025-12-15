@@ -134,7 +134,22 @@ export default function TopicQuizPage() {
           Question {currentIndex + 1} / {quiz.questions.length}
         </Text>
 
-        <Text className="mb-4 text-lg leading-6 text-neutral-800">{q.text}</Text>
+        {/* <Text className="mb-4 text-lg leading-6 text-neutral-800">{q.text}</Text> */}
+        <View className="mb-4">
+          <RenderHTML
+            contentWidth={width - 48} // Account for padding
+            source={{ html: q.textHtml as string }}
+            customHTMLElementModels={customHTMLElementModels}
+            renderers={renderers}
+            tagsStyles={tagsStyles}
+            systemFonts={['System']}
+            enableExperimentalMarginCollapsing
+            defaultTextProps={{ selectable: false }}
+            renderersProps={{
+              img: { enableExperimentalPercentWidth: true }
+            }}
+          />
+        </View>
         {q.options.map((opt, idx) => (
           <AnswerOption
             key={idx}

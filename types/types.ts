@@ -93,6 +93,8 @@ export interface Quiz {
 export interface Question {
   _id: string;
   text: string;
+  textJson: string;
+  textHtml: string;
   options: { _id?: string; text: string; isCorrect: boolean }[];
   explanation: string;
   difficulty: 'easy' | 'medium' | 'hard';

@@ -136,7 +136,20 @@ export default function SubjectQuizPage() {
             Question {currentIndex + 1} / {quiz.questions.length}
           </Text>
 
-          <Text className="mb-4 text-lg leading-6 text-neutral-800">{q.text}</Text>
+          {/* <Text className="mb-4 text-lg leading-6 text-neutral-800">{q.text}</Text> */}
+          <RenderHTML
+            contentWidth={width - 48} // Account for padding
+            source={{ html: q.textHtml as string }}
+            customHTMLElementModels={customHTMLElementModels}
+            renderers={renderers}
+            tagsStyles={tagsStyles}
+            systemFonts={['System']}
+            enableExperimentalMarginCollapsing
+            defaultTextProps={{ selectable: false }}
+            renderersProps={{
+              img: { enableExperimentalPercentWidth: true },
+            }}
+          />
         </View>
         {q.options.map((opt: { text: string; isCorrect: boolean }, idx: number) => (
           <AnswerOption

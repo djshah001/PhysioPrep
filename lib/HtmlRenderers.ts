@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, View, Pressable, Linking } from 'react-native';
 import { HTMLContentModel, HTMLElementModel } from 'react-native-render-html';
+import { Image as ExpoImage } from 'expo-image';
 
 export const customHTMLElementModels = {
   iframe: HTMLElementModel.fromCustomModel({
@@ -220,8 +221,6 @@ export const renderers = {
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: '#ffffff',
-          // padding: 10,
-          // marginVertical: 10,
           borderRadius: 10,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
@@ -242,5 +241,19 @@ export const renderers = {
       { key, onPress, accessibilityRole: 'link' },
       React.createElement(TDefaultRenderer, props)
     );
+  },
+  img: ({ tnode, ...props }: any) => {
+    const src = tnode?.attributes?.src;
+    const width = tnode?.attributes?.width;
+    // const height = tnode?.attributes?.height;
+    if (!src) return null;
+    return React.createElement(ExpoImage, {
+      source: src,
+      style: { width: width, height: 300, borderRadius: 8, marginVertical: 10 },
+      contentFit: 'contain',
+      accessibilityLabel: tnode?.attributes?.alt || 'Image',
+      placeholder:"|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj["
+      // ...props,
+    });
   },
 } as const;

@@ -34,7 +34,7 @@ const RootLayout = () => {
   const [user] = useAtom(userAtom);
   const [token] = useAtom(tokenAtom);
   const [refreshToken] = useAtom(refreshTokenAtom);
-   const [paymentLoading] = useAtom(paymentProcessingAtom);
+  const [paymentLoading] = useAtom(paymentProcessingAtom);
 
   const hasValidAuth = isLoggedIn && user && token && refreshToken;
 
@@ -83,7 +83,7 @@ const RootLayout = () => {
     }
 
     // Handle app open ad (only for non-Pro users)
-    showAppOpenAdOnForeground((!!hasValidAuth && shouldShowAds()) && !paymentLoading );
+    showAppOpenAdOnForeground(!!hasValidAuth && shouldShowAds() && !paymentLoading);
   });
 
   useEffect(() => {
@@ -125,8 +125,7 @@ const RootLayout = () => {
       <StripeProvider
         publishableKey={publishableKey || STRIPE_CONFIG.publishableKey}
         merchantIdentifier={STRIPE_CONFIG.merchantIdentifier}
-        urlScheme={STRIPE_CONFIG.urlScheme}
-      >
+        urlScheme={STRIPE_CONFIG.urlScheme}>
         <SheetProvider>
           <SafeAreaView className="flex-1 bg-background" edges={['bottom', 'left', 'right']}>
             <StatusBar barStyle="dark-content" />

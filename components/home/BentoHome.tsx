@@ -102,19 +102,6 @@ export default function BentoHome() {
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(150).springify()}>
-              {/* <TouchableOpacity
-              onPress={() => setDqVisible(true)}
-              style={{ backgroundColor: '#1F2937', borderRadius: 16, padding: 16 }}>
-              <Text style={{ color: '#D1D5DB', fontSize: 14 }}>Daily Question</Text>
-              <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>
-                Answer today’s question →
-              </Text>
-              <Text style={{ color: '#9CA3AF', marginTop: 6 }}>
-                {stats?.questionsAnsweredToday
-                  ? 'You’ve answered today'
-                  : 'Available until midnight'}
-              </Text>
-            </TouchableOpacity> */}
               <Button
                 title="Daily Question"
                 onPress={() => setDqVisible(true)}
@@ -205,7 +192,11 @@ export default function BentoHome() {
 
         <View className=" gap-3">
           <View className="flex-row flex-wrap gap-3">
-            {stats?.questionsSolvedPerSubject?.slice(0, 6).map((s, idx) => (
+            {stats?.questionsSolvedPerSubject?.slice(0, 6).map((s, idx) => 
+
+              {
+                const percentage = s.totalQuestions > 0 ? (s.solved / s.totalQuestions) * 100 : 0;
+                return (
               <Pressable
                 onPress={() => router.push(`/subjects/${s.id}`)}
                 key={idx}
@@ -213,32 +204,17 @@ export default function BentoHome() {
                 <View className="mb-2 flex-row items-center justify-between">
                   <Text className="text-md font-bold text-slate-700">{s.name}</Text>
                   <Text style={{ fontSize: 13, color: '#64748B' }}>
-                    {((s.solved / s.totalQuestions) * 100).toFixed(1)}%
+                    {(percentage).toFixed(1)}%
                   </Text>
                 </View>
-                <ProgressBar value={(s.solved / s.totalQuestions) * 100} />
+                <ProgressBar value={percentage} />
               </Pressable>
-            ))}
+              );
+              }
+            )}
           </View>
         </View>
       </Animated.View>
-
-      {/* <Animated.View entering={FadeInDown.delay(100).springify()} className="my-4 flex-row gap-2">
-        <Button
-          title="Take Test"
-          onPress={() => router.push('/comprehensive-test')}
-          className="flex-1 rounded-3xl bg-green-500 py-4 shadow-lg shadow-black"
-          textClassName="text-white mr-1"
-          rightIcon={<MaterialCommunityIcons name="arrow-top-right" size={20} color="white" />}
-        />
-        <Button
-          title="Explore Subjects"
-          onPress={() => router.push('/subjects')}
-          className="flex-1 rounded-3xl bg-blue-500 py-4 shadow-lg shadow-black"
-          textClassName="text-white"
-          rightIcon="earth-sharp"
-        />
-      </Animated.View> */}
 
       <View className="h-32" />
       {/* Pro Upgrade Sheet */}

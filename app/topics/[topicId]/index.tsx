@@ -1,11 +1,5 @@
 import { useEffect } from 'react';
-import {
-  View,
-  Text,
-  ActivityIndicator,
-  ScrollView,
-  useWindowDimensions,
-} from 'react-native';
+import { View, Text, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomHeader } from 'components/common/CustomHeader';
@@ -20,11 +14,8 @@ import {
 import RenderHtml from 'react-native-render-html';
 import { customHTMLElementModels, renderers, tagsStyles } from 'lib/HtmlRenderers';
 import { Button } from '~/ui/button';
-import {
-  loadRewardedAdAtom,
-  rewardedAdLoadedAtom,
-  showRewardedAdAtom
-} from 'store/rewardedAd';
+import { loadRewardedAdAtom, rewardedAdLoadedAtom, showRewardedAdAtom } from 'store/rewardedAd';
+import { useProAccess } from '~/useProAccess';
 
 export default function TopicDetailsPage() {
   const router = useRouter();
@@ -41,6 +32,7 @@ export default function TopicDetailsPage() {
   const [rewardedAdLoaded] = useAtom(rewardedAdLoadedAtom);
   const loadRewardedAd = useSetAtom(loadRewardedAdAtom);
   const showRewardedAd = useSetAtom(showRewardedAdAtom);
+  const { shouldShowAds } = useProAccess();
 
   // Fetch topic details
   useEffect(() => {
@@ -50,13 +42,17 @@ export default function TopicDetailsPage() {
 
   const handleTakeQuiz = async () => {
     if (!topic) return;
-    await showRewardedAd();
+    if (shouldShowAds()) {
+      await showRewardedAd();
+    }
     router.push(`/topics/${topic._id}/quiz`);
   };
-  
+
   useFocusEffect(() => {
     // Load ad when screen comes into focus
-    loadRewardedAd();
+    if (shouldShowAds()) {
+      loadRewardedAd();
+    }
   });
 
   // console.log(topic?.descriptionHtml);
@@ -134,8 +130,8 @@ export default function TopicDetailsPage() {
             textClassName="text-white text-lg font-bold"
             rightIcon="play-outline"
             // leftIconColor={colors.blue[600]}
-            disabled={!rewardedAdLoaded}
-            loading={!rewardedAdLoaded}
+            disabled={!rewardedAdLoaded && shouldShowAds()}
+            loading={!rewardedAdLoaded && shouldShowAds()}
           />
           {/* <Button
               title="Take Test"
@@ -203,7 +199,6 @@ export default function TopicDetailsPage() {
           </View>
         )}
 
-        
         {/* Topic Metadata */}
         <View className="rounded-2xl bg-grey6 p-6 shadow">
           <Text className="mb-4 text-lg font-semibold text-foreground">Details</Text>
