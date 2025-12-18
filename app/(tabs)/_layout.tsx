@@ -1,192 +1,249 @@
-import { Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect } from 'react';
+import { View, TouchableOpacity, Platform, StyleSheet, Dimensions } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  interpolate,
+} from 'react-native-reanimated';
 import colors from 'tailwindcss/colors';
-import Animated from 'react-native-reanimated';
 import { CustomHeader } from '~/common/CustomHeader';
 
-export default function TabsLayout() {
-  const pathname = usePathname();
-  const isIndexScreen =
-    pathname === '/' ||
-    pathname === '/home' ||
-    pathname === '/subjects' ||
-    pathname === '/explore' ||
-    pathname === '/quiz' ||
-    pathname === '/profile';
 
-  // console.log(pathname);
+// Define the icons for each route
+const TAB_ICONS: Record<string, { default: keyof typeof Ionicons.glyphMap; focused: keyof typeof Ionicons.glyphMap }> = {
+  index: { default: 'home-outline', focused: 'home' },
+  subjects: { default: 'book-outline', focused: 'book' },
+  'comprehensive-test': { default: 'clipboard-outline', focused: 'clipboard' },
+  profile: { default: 'person-outline', focused: 'person' },
+};
 
-  const CustomTabBar = ({
-    color,
-    size,
-    focused,
-    name,
-  }: {
-    color: string;
-    focused: boolean;
-    size: number;
-    name: keyof typeof Ionicons.glyphMap;
-  }) => {
-    return (
-      <Animated.View
-        className={`relative h-14 w-14 items-center justify-center ${focused ? 'bg-primary shadow-xl shadow-blue-700' : ''} rounded-full`}>
-        {/* Background circle for active state */}
-        {/* <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              width: 45,
-              height: 45,
-              borderRadius: 50,
-              backgroundColor: Colors.primary,
-            }
-          ]}
-        /> */}
-        {/* Icon */}
-        <Ionicons name={name} size={24} color={color} />
-      </Animated.View>
-    );
-  };
+// --- Individual Tab Button Component ---
+const TabButton = ({
+  isFocused,
+  routeName,
+  onPress,
+  onLongPress,
+  label,
+}: {
+  isFocused: boolean;
+  routeName: string;
+  onPress: () => void;
+  onLongPress: () => void;
+  label: string;
+}) => {
+  const scale = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withSpring(isFocused ? 1 : 0, {
+      damping: 30,
+      stiffness: 200,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFocused]);
+
+  const animatedIconStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          scale: interpolate(scale.value, [0, 1], [1, 1.1]),
+        },
+        {
+          translateY: interpolate(scale.value, [0, 1], [0, -1]),
+        },
+      ],
+    };
+  });
+
+  const animatedBgStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+      opacity: scale.value,
+    };
+  });
+
+  const iconName = isFocused
+    ? TAB_ICONS[routeName]?.focused || 'alert-circle'
+    : TAB_ICONS[routeName]?.default || 'alert-circle-outline';
 
   return (
+    <TouchableOpacity
+      onPress={onPress}
+      onLongPress={onLongPress}
+      style={styles.tabButton}
+      activeOpacity={0.7}>
+      
+      {/* Animated Background Circle */}
+      <Animated.View style={[styles.activeBackground, animatedBgStyle]} />
+
+      <Animated.View style={[styles.iconContainer, animatedIconStyle]}>
+        <Ionicons
+          name={iconName}
+          size={24}
+          color={isFocused ? colors.white : colors.gray[400]}
+        />
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
+
+// --- Main Custom Tab Bar Container ---
+const CustomTabBar = ({ state, descriptors, navigation }: any) => {
+  const pathname = usePathname();
+  
+  // Logic to hide tab bar on specific screens
+  // We use an "Allow List" approach based on your previous code
+  const visibleRoutes = ['/', '/home', '/subjects', '/explore', '/quiz', '/profile', '/comprehensive-test'];
+  
+  // Check if current path matches strictly or is the index
+  const isVisible = visibleRoutes.includes(pathname) || pathname === '/';
+
+  // Animation for showing/hiding the bar
+  const translateY = useSharedValue(0);
+
+  useEffect(() => {
+    translateY.value = withTiming(isVisible ? 0 : 100, { duration: 300 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible]);
+
+  const animatedContainerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
+
+  return (
+    <Animated.View style={[styles.tabBarContainer, animatedContainerStyle]}>
+      {state.routes.map((route: any, index: number) => {
+        const { options } = descriptors[route.key];
+        const isFocused = state.index === index;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            // Add Haptic Feedback
+            navigation.navigate(route.name, route.params);
+          }
+        };
+
+        const onLongPress = () => {
+          navigation.emit({
+            type: 'tabLongPress',
+            target: route.key,
+          });
+        };
+
+        return (
+          <TabButton
+            key={route.key}
+            isFocused={isFocused}
+            routeName={route.name}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            label={options.tabBarLabel}
+          />
+        );
+      })}
+    </Animated.View>
+  );
+};
+
+// --- Main Layout ---
+export default function TabsLayout() {
+  return (
     <Tabs
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.white,
-        tabBarInactiveTintColor: colors.blue[400],
-        tabBarShowLabel: false,
-        tabBarIconStyle: {},
         animation: 'shift',
-        tabBarStyle: {
-          position: 'absolute',
-          bottom: Platform.OS === 'ios' ? 15 : 10,
-          left: 20,
-          right: 20,
-          borderRadius: 50,
-          overflow: 'hidden',
-          marginHorizontal: 20,
-          // backgroundColor: Colors.primary,
-          height: 65,
-          display: isIndexScreen ? 'flex' : 'none',
-          paddingHorizontal: 16,
-          paddingTop: 4,
-          borderWidth: 0,
-          boxShadow: '0px 20px 40px rgba(20, 20, 20, 0.2)',
-        },
-        tabBarItemStyle: {
-          paddingVertical: 9,
-          paddingHorizontal: 4,
-          borderRadius: 25,
-          marginHorizontal: 2,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
-      }}
-      // screenOptions={{
-      //   headerShown: false,
-      //   tabBarActiveTintColor: colors.white,
-      //   tabBarInactiveTintColor: colors.blue[400],
-      //   tabBarShowLabel: false,
-      //   tabBarIconStyle: {},
-      //   animation: 'shift',
-      //   tabBarStyle: {
-      //     position: 'absolute',
-      //     bottom: Platform.OS === 'ios' ? 20 : 15,
-      //     left: 20,
-      //     right: 20,
-      //     borderRadius: 50,
-      //     overflow: 'hidden',
-      //     marginHorizontal: 20,
-      //     backgroundColor: 'transparent',
-      //     height: 65,
-      //     display: isIndexScreen ? 'flex' : 'none',
-      //     paddingHorizontal: 15,
-      //     paddingTop: 6,
-      //     borderWidth: 1,
-      //     borderColor: Colors.secondary,
-      //     elevation: 5,
-      //     // borderBottomLeftRadius: 30,
-      //     // borderTopRightRadius: 30,
-      //   },
-      //   tabBarBackground: () => (
-      //     <BlurView
-      //       intensity={10}
-      //       tint="systemChromeMaterialLight"
-      //       experimentalBlurMethod={`${isIndexScreen ? 'dimezisBlurView' : 'none'}`}
-      //       style={{
-      //         position: 'absolute',
-      //         top: 0,
-      //         left: 0,
-      //         right: 0,
-      //         bottom: 0,
-      //         borderRadius: 20,
-      //       }}
-      //     />
-      //   ),
-      //   tabBarItemStyle: {
-      //     paddingVertical: 8,
-      //     paddingHorizontal: 4,
-      //     borderRadius: 25,
-      //     marginHorizontal: 2,
-      //   },
-      //   tabBarLabelStyle: {
-      //     fontSize: 12,
-      //     fontWeight: '600',
-      //   },
-      // }}
-    >
+      }}>
+      
       <Tabs.Screen
         name="index"
         options={{
-          title: 'index',
-          tabBarIcon: ({ color, size, focused }) => (
-            <CustomTabBar color={color} size={size} focused={focused} name="home" />
-          ),
+          title: 'Home',
         }}
       />
       <Tabs.Screen
         name="subjects"
         options={{
           title: 'Subjects',
-          tabBarIcon: ({ color, size, focused }) => (
-            <CustomTabBar color={color} size={size} focused={focused} name="book" />
-          ),
-          headerShown: true,
           header: () => <CustomHeader title="Subjects" />,
+          // headerShown: true, // If you want the header visible
         }}
       />
-      {/* <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color, size, focused }) => (
-            <CustomTabBar color={color} size={size} focused={focused} name="compass" />
-          ),
-        }}
-      /> */}
       <Tabs.Screen
         name="comprehensive-test"
         options={{
-          title: 'Comprehensive Test',
+          title: 'Test',
           header: () => <CustomHeader title="Comprehensive Test" showBack />,
           headerShown: true,
-          tabBarIcon: ({ color, size, focused }) => (
-            <CustomTabBar color={color} size={size} focused={focused} name="clipboard" />
-          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size, focused }) => (
-            <CustomTabBar color={color} size={size} focused={focused} name="person" />
-          ),
         }}
       />
     </Tabs>
   );
 }
+
+// --- Styles ---
+const styles = StyleSheet.create({
+  tabBarContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 25 : 10,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    paddingVertical: 18,
+    borderRadius: 35,
+    borderCurve: 'continuous',
+    // High quality shadow
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  activeBackground: {
+    position: 'absolute',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.blue[500], // Adjust to your primary color
+    // Glow effect for active state
+    shadowColor: colors.blue[500],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+});

@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, ScrollView, RefreshControl, Text, TextInput } from 'react-native';
-import { useAuth } from 'hooks/useAuth';
+import { View, ScrollView, RefreshControl, Text, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useAuth } from 'hooks/useAuth';
 import { SubjectCard } from 'components/subject/SubjectCard';
 import { EmptySubject } from 'components/subject/EmptySubject';
 import { SubjectsScreenSkeleton } from 'components/skeletons/SubjectsScreenSkeleton';
@@ -34,89 +36,139 @@ export default function SubjectsPage() {
     });
   }, [query, subjects]);
 
-  // console.log(testState.Qs.length)
-
-  if (loading) {
+  // Loading State
+  if (loading && !subjects?.length) {
     return <SubjectsScreenSkeleton />;
   }
 
+  // Error State
   if (error) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-background" edges={['bottom']}>
-        <ScrollView
-          contentContainerClassName="flex-1"
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={onRefresh}
-              tintColor={colors.blue[500]}
-            />
-          }>
-          <Text className="text-red-500">{error}</Text>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  if (!subjects || subjects.length === 0) {
-    return (
-      <SafeAreaView className="flex-1" edges={['bottom']}>
-        <ScrollView
-          className="p-6"
-          contentContainerClassName="items-center justify-center flex-1"
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={onRefresh}
-              tintColor={colors.blue[500]}
-            />
-          }>
-          <EmptySubject type="subject" isAdmin={user?.role === 'admin'} href="/subjects/add" />
-        </ScrollView>
+      <SafeAreaView className="flex-1 items-center justify-center bg-neutral-50" edges={['top']}>
+        <View className="items-center px-6">
+          <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-red-50">
+            <Ionicons name="cloud-offline-outline" size={40} color="#EF4444" />
+          </View>
+          <Text className="text-center text-xl font-bold text-neutral-800">
+            Unable to load subjects
+          </Text>
+          <Text className="mt-2 text-center text-neutral-500 mb-8 px-4">
+            {error || "Check your internet connection and try again."}
+          </Text>
+          <TouchableOpacity
+            onPress={onRefresh}
+            className="rounded-full bg-neutral-900 px-8 py-3 shadow-lg"
+          >
+            <Text className="font-bold text-white">Try Again</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
+    <SafeAreaView className="flex-1 bg-neutral-50" edges={['top']}>
       <ScrollView
-        className="flex-1 p-6 py-6"
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={colors.blue[500]} />
-        }>
-        <View className="mb-6">
-          <View className="mb-3">
+          <RefreshControl 
+            refreshing={loading} 
+            onRefresh={onRefresh} 
+            tintColor={colors.indigo[500]} 
+            colors={[colors.indigo[500]]}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
+        <Animated.View entering={FadeInDown.duration(600).springify()} className="px-6 pt-6 pb-4">
+          <View className="flex-row justify-between items-start mb-2">
+            <View>
+              <Text className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">
+                Library
+              </Text>
+              <Text className="text-4xl font-black text-neutral-900 tracking-tight">
+                Subjects
+              </Text>
+            </View>
+            <TouchableOpacity 
+              onPress={onRefresh}
+              className="p-2 bg-white rounded-full shadow-sm border border-neutral-100"
+            >
+              <Ionicons name="reload" size={20} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          <Text className="text-base text-neutral-500 leading-6 max-w-[90%]">
+            Select a subject to start practicing questions and quizzes.
+          </Text>
+        </Animated.View>
+
+        {/* Search Bar */}
+        <Animated.View 
+          entering={FadeInDown.delay(100).duration(600).springify()} 
+          className="px-6 pb-6 pt-2"
+        >
+          <View className="flex-row items-center rounded-[20px] bg-white px-5 py-4 shadow-sm border border-neutral-200/80">
+            <Ionicons name="search" size={22} color="#9CA3AF" />
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Search subjects"
+              placeholder="Search topics..."
               placeholderTextColor="#9CA3AF"
-              className="h-13 rounded-3xl border border-neutral-400 bg-white px-4 text-base text-neutral-800 shadow-lg"
-              accessibilityLabel="Search subjects"
+              className="flex-1 ml-3 text-base text-neutral-900 font-medium"
+              autoCapitalize="none"
+              clearButtonMode="while-editing"
             />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={() => setQuery('')} hitSlop={10}>
+                <Ionicons name="close-circle" size={20} color="#D1D5DB" />
+              </TouchableOpacity>
+            )}
           </View>
-          {/* <Button
-            title="Start Comprehensive Test"
-            onPress={() => router.push('/subjects/comprehensive-test')}
-            className="h-12 justify-center rounded-3xl bg-neutral-900 shadow-md"
-            textClassName="text-white font-bold"
-          /> */}
-        </View>
+        </Animated.View>
 
-        <View className="flex flex-row flex-wrap">
-          {filteredSubjects && filteredSubjects.length > 0 ? (
-            filteredSubjects.map((subject, index) => (
-              <View key={subject._id} className={`w-[48%] ${index % 2 === 0 ? 'mr-3' : ''}`}>
-                <SubjectCard subject={subject} index={index} isAdmin={user?.role === 'admin'} />
-              </View>
-            ))
-          ) : (
-            <View className="mt-8 w-full items-center">
-              <Text className="text-muted">No subjects match your search.</Text>
+        {/* Subjects Grid */}
+        <View className="px-6">
+          {!subjects || subjects.length === 0 ? (
+            <Animated.View entering={FadeInUp.delay(200).springify()}>
+                <EmptySubject type="subject" isAdmin={user?.role === 'admin'} href="/subjects/add" />
+            </Animated.View>
+          ) : filteredSubjects && filteredSubjects.length > 0 ? (
+            <View className="flex-row flex-wrap justify-between">
+              {filteredSubjects.map((subject, index) => (
+                <Animated.View 
+                  key={subject._id} 
+                  // entering={FadeInUp.delay(index * 100).springify().damping(14)}
+                  // layout={Layout.springify()}
+                  className="w-[48%] mb-5" // 48% width allows 2 columns with a ~4% gap
+                >
+                  <SubjectCard 
+                    subject={subject} 
+                    index={index} 
+                    isAdmin={user?.role === 'admin'} 
+                  />
+                </Animated.View>
+              ))}
             </View>
+          ) : (
+            <Animated.View entering={FadeInUp.springify()} className="items-center py-24 px-10">
+              <View className="h-24 w-24 rounded-full bg-neutral-100 items-center justify-center mb-6 border border-neutral-200">
+                <Ionicons name="search-outline" size={40} color="#9CA3AF" />
+              </View>
+              <Text className="text-xl font-bold text-neutral-800 text-center">No matches found</Text>
+              <Text className="text-neutral-500 text-center mt-2 leading-6">
+                We couldn&#39;t find any subjects matching &quot;<Text className="font-semibold text-neutral-800">{query}</Text>&quot;.
+              </Text>
+              <TouchableOpacity 
+                onPress={() => setQuery('')}
+                className="mt-8"
+              >
+                <Text className="text-indigo-600 font-bold">Clear Search</Text>
+              </TouchableOpacity>
+            </Animated.View>
           )}
         </View>
-        <View className="h-32" />
       </ScrollView>
     </SafeAreaView>
   );

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ActivityIndicator, useWindowDimensions } from 'react-native';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { quizApi } from 'services/api';
 import { Button } from 'components/ui/button';
 import { useAtom } from 'jotai';
@@ -17,7 +17,7 @@ import SubmissionModal from 'components/quiz/SubmissionModal';
 import JumpToQuestionModal from 'components/quiz/JumpToQuestionModal';
 import QuizReview from 'components/questions/QuizReview';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomHeader } from '~/common/CustomHeader';
+// import { CustomHeader } from '~/common/CustomHeader';
 import { handleError } from 'lib/utils';
 import { ScrollView } from 'react-native-gesture-handler';
 import ActionSheet, { ActionSheetRef } from 'react-native-actions-sheet';
@@ -30,6 +30,7 @@ import {
   handleSelect,
   handleSubmit,
 } from 'lib/QuizHandelers';
+import { QuizResultProps } from 'types/types';
 export default function TopicQuizPage() {
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const router = useRouter();
@@ -40,23 +41,23 @@ export default function TopicQuizPage() {
   const [answers, setAnswers] = useAtom(quizAnswersAtom);
   const [submitting, setSubmitting] = useState(false);
   const [showReview, setShowReview] = useState(false);
-  const [result, setResult] = useState<{ score: number; totalQuestions: number } | null>(null);
+  const [result, setResult] = useState<QuizResultProps | null>(null);
   const elapsed = useRef(0);
   const startTimeRef = useRef<number | null>(null);
   const [showJumpModal, setShowJumpModal] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
-  const navigation = useNavigation();
+  // const navigation = useNavigation();
   const explainRef = useRef<ActionSheetRef>(null);
   const { width } = useWindowDimensions();
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      header: () => (
-        <CustomHeader title={`${result ? 'Result Of The Quiz' : 'Topic Quiz'}`} showBack />
-      ),
-    });
-  }, [navigation, result]);
+  // useEffect(() => {
+  //   navigation.setOptions({
+  //     headerShown: true,
+  //     header: () => (
+  //       <CustomHeader title={`${result ? 'Result Of The Quiz' : 'Topic Quiz'}`} showBack />
+  //     ),
+  //   });
+  // }, [navigation, result]);
 
   // Fetch quiz
   useEffect(() => {
@@ -112,6 +113,8 @@ export default function TopicQuizPage() {
     }));
     return (
       <QuizReview
+        key={quiz.sessionId}
+        xpEarned={result.xpEarned}
         reviewQuestions={reviewQuestions}
         userAnswers={answers}
         totalTime={elapsed.current}
@@ -234,6 +237,7 @@ export default function TopicQuizPage() {
       />
 
       <ActionSheet
+      
         ref={explainRef}
         snapPoints={[50, 90]}
         gestureEnabled

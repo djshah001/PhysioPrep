@@ -10,24 +10,50 @@ export type FavoriteSubject = {
 };
 
 export type RecentActivityItem = {
-  questionId: string;
-  subjectId: string | null;
+  id: string;
+  subjectName: string;
+  subjectColor: string;
   isCorrect: boolean;
   timeSpent: number;
-  attemptedAt: string;
+  createdAt: string;
+};
+
+export type BadgeDetails = {
+  name: string;
+  icon: string;
+  color: string;
+  description?: string;
 };
 
 export type UserHomeStats = {
+  totalQuestions: number;
   totalCorrectlyAnswered: number;
   totalQuestionAttempts: number;
+
+  // Gamification Data from Methods
+  xp: number;
+  level: number;
+  currentBadge: BadgeDetails; // { name: "Master", icon: "💎", ... }
+
+  // Progress Bar Data
+  xpToNextLevel: number; // e.g., 500
+  xpInCurrentLevel: number; // e.g., 250
+  levelProgressPercent: number; // e.g., 50
+  hasLeveledUp: boolean; // e.g., true
+
   currentStreak: number;
-  accuracyPercentage: number;
+  accuracyPercentage: number; // e.g., 90
   questionsAnsweredToday: number;
-  averageTimePerQuestion: number;
+  averageScore: number; // e.g., 90
   favoriteSubjects: FavoriteSubject[];
+  questionsSolvedPerSubject:  {
+      id: string;
+      name: string;
+      color: string;
+      solved: number;
+      totalQuestions: number;
+    }[];
   recentActivity: RecentActivityItem[];
-  questionsSolvedPerSubject: any[];
-  totalQuestions: number;
 };
 
 export const homeStatsAtom = atom<UserHomeStats | null>(null);

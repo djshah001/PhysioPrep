@@ -1,675 +1,249 @@
-import { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Alert,
-  RefreshControl,
-  Image,
-  TouchableOpacity,
-} from 'react-native';
-import { Button } from '../ui/button';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, RefreshControl, Image, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ProfileSkeleton } from '../../components/skeletons/ProfileSkeleton';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  FadeInDown,
-  FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '../../hooks/useAuth';
 import { useAtom } from 'jotai';
-import { userAtom, isLoggedInAtom } from '../../store/auth';
-import { proStatusAtom } from '../../store/pro';
+import { userAtom } from '../../store/auth';
 import { useProAccess } from '../../hooks/useProAccess';
-import { cancelProSubscription, getPaymentHistory } from '../../services/payment';
-import api from '../../services/api';
+import { fetchUserProfile } from 'actions/user';
+// Updated service import
 
-interface ProfileStats {
-  totalQuizzesTaken: number;
-  totalTestsTaken: number;
-  correctAnswers: number;
-  averageScore: number;
-  currentStreak: number;
-  longestStreak: number;
-  totalQuestionsAnswered?: number;
-}
+// --- Components ---
 
-// Enhanced Stats Card Component
-const StatsCard = ({
-  title,
-  value,
-  colors,
-  icon,
-  delay = 0,
-}: {
-  title: string;
-  value: string | number;
-  colors: readonly [string, string];
-  icon: keyof typeof Ionicons.glyphMap;
+const MenuItem = ({ 
+  icon, 
+  title, 
+  subtitle, 
+  color, 
+  onPress, 
+  delay = 0 
+}: { 
+  icon: keyof typeof Ionicons.glyphMap; 
+  title: string; 
+  subtitle: string; 
+  color: string; 
+  onPress: () => void;
   delay?: number;
-}) => {
-  const scale = useSharedValue(0);
+}) => (
+  <Animated.View entering={FadeInDown.delay(delay).springify()}>
+    <TouchableOpacity 
+      onPress={onPress}
+      className="mb-3 flex-row items-center rounded-2xl bg-white p-4 shadow-sm active:bg-neutral-50"
+    >
+      <View className={`mr-4 h-12 w-12 items-center justify-center rounded-xl bg-opacity-10`} style={{ backgroundColor: `${color}20` }}>
+        <Ionicons name={icon} size={24} color={color} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-base font-semibold text-neutral-800">{title}</Text>
+        <Text className="text-xs text-neutral-500">{subtitle}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+    </TouchableOpacity>
+  </Animated.View>
+);
 
-  useEffect(() => {
-    scale.value = withSpring(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    // entering/layout animation applied to the outer wrapper only
-    <Animated.View
-      entering={FadeInUp.delay(delay).springify()}
-      className="mb-1 min-w-[45%] flex-1">
-      {/* inner Animated.View holds the transform so it won't be overwritten by layout animation */}
-      <Animated.View style={animatedStyle} className="w-full">
-        <LinearGradient colors={colors as any} className="rounded-2xl p-4 shadow-lg overflow-hidden">
-          <View className="mb-2 flex-row items-center justify-between">
-            <Ionicons name={icon} size={24} color="white" />
-            <Text className="text-2xl font-bold text-white">{String(value)}</Text>
+const ProBanner = ({ hasPro, onPress }: { hasPro: boolean; onPress: () => void }) => (
+  <Animated.View entering={FadeInDown.delay(200).springify()} className="mb-6">
+    <TouchableOpacity onPress={onPress}>
+      <LinearGradient
+        colors={hasPro ? ['#10B981', '#059669'] : ['#6366F1', '#4F46E5']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        className="relative overflow-hidden rounded-3xl p-6 shadow-lg shadow-indigo-500/20"
+      >
+        <View className="z-10 flex-row items-center justify-between">
+          <View>
+            <Text className="text-2xl font-bold text-white">
+              {hasPro ? 'Pro Active' : 'Upgrade to Pro'}
+            </Text>
+            <Text className="text-indigo-100">
+              {hasPro ? 'You have full access' : 'Unlock unlimited tests & stats'}
+            </Text>
           </View>
-          <Text className="text-sm font-medium text-white/80">{title}</Text>
-        </LinearGradient>
-      </Animated.View>
-    </Animated.View>
-  );
-};
-
-// Utility functions
-const formatDate = (d: string | null) => (d ? new Date(d).toLocaleDateString() : 'Never');
-
-const formatMemberSince = (d: string | null) => {
-  if (!d) return 'Unknown';
-  const date = new Date(d);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long'
-  });
-};
-
-const calculateDaysSince = (d: string | null) => {
-  if (!d) return 0;
-  const date = new Date(d);
-  const now = new Date();
-  return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-};
-
-// Profile Header Component
-const ProfileHeader = ({
-  user,
-  proInfo,
-}: {
-  user: any;
-  proInfo: {
-    hasProAccess: boolean;
-    isPro: boolean;
-    isProActive: boolean;
-    proExpiresAt: Date | null;
-    showUpgradePrompt: boolean;
-  };
-}) => {
-  const headerScale = useSharedValue(0);
-  const avatarRotation = useSharedValue(0);
-
-  useEffect(() => {
-    headerScale.value = withSpring(1, { damping: 100});
-    avatarRotation.value = withTiming(360, { duration: 1000 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const headerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: headerScale.value }],
-  }));
-
-  const avatarAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${avatarRotation.value}deg` }],
-  }));
-
-  return (
-    // entering applied here
-    <Animated.View
-      entering={FadeInDown.delay(100).springify()}
-      className="mb-6">
-      {/* transform applied to this inner Animated.View (no entering on this one) */}
-      <Animated.View style={headerAnimatedStyle}>
-        <LinearGradient
-          colors={['#374151', '#4B5563', '#6B7280']}
-          className="rounded-3xl p-4 shadow-2xl overflow-hidden"
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}>
-
-          {/* User Info */}
-          <View className="flex-row items-center">
-            <Animated.View
-              style={avatarAnimatedStyle}
-              className="mr-6 h-24 w-24 overflow-hidden rounded-full border-2 border-white/20 shadow-lg">
-              {user?.avatar ? (
-                <Image source={{ uri: user.avatar }} className="h-full w-full" resizeMode="cover" />
-              ) : (
-                <LinearGradient
-                  colors={['#6366F1', '#8B5CF6', '#EC4899']}
-                  className="flex-1 items-center justify-center">
-                  <Text className="text-3xl font-bold text-white">
-                    {user?.name?.[0]?.toUpperCase() || 'U'}
-                  </Text>
-                </LinearGradient>
-              )}
-            </Animated.View>
-
-            <View className="flex-1">
-              <Text className="mb-1 text-2xl font-bold text-white">{user?.name || 'User'}</Text>
-              <Text className="mb-1 text-base text-neutral-300">{user?.email}</Text>
-              <Text className="mb-3 text-sm text-neutral-400">
-                Member since {formatMemberSince(user?.createdAt)}
-              </Text>
-
-              <View className="flex-row flex-wrap items-center">
-                {/* Pro Status Badge */}
-                {proInfo.hasProAccess ? (
-                  <View className="mb-2 mr-3 rounded-full bg-rose-500/20 px-4 py-2">
-                    <Text className="text-sm font-semibold text-rose-400">Pro Active</Text>
-                  </View>
-                ) : (
-                  <View className="mb-2 mr-3 rounded-full bg-neutral-500/20 px-4 py-2">
-                    <Text className="text-sm font-semibold text-neutral-400">Free</Text>
-                  </View>
-                )}
-
-                {/* Google OAuth Badge */}
-                {user?.provider === 'google' && (
-                  <View className="mb-2 mr-3 rounded-full bg-blue-500/20 px-4 py-2">
-                    <Text className="text-sm font-semibold text-blue-400">Google</Text>
-                  </View>
-                )}
-
-                {/* Admin Badge */}
-                {user?.role === 'admin' && (
-                  <View className="mb-2 mr-3 rounded-full bg-purple-500/20 px-4 py-2">
-                    <Text className="text-sm font-semibold text-purple-400">Admin</Text>
-                  </View>
-                )}
-
-                {/* Email Verified Badge */}
-                {user?.isEmailVerified && (
-                  <View className="mb-2 rounded-full bg-green-500/20 px-4 py-2">
-                    <Text className="text-sm font-semibold text-green-400">Verified</Text>
-                  </View>
-                )}
-              </View>
-            </View>
+          <View className="h-12 w-12 items-center justify-center rounded-full bg-white/20">
+            <Ionicons name={hasPro ? "checkmark-circle" : "diamond"} size={24} color="white" />
           </View>
-
-          {/* Pro Subscription Details */}
-          {proInfo.hasProAccess && user?.proActivatedAt && (
-            <View className="mt-4 border-t border-neutral-600/50 pt-4">
-              <View className="flex-row items-center justify-between">
-                <View>
-                  <Text className="text-sm font-medium text-white">Pro Subscription</Text>
-                  <Text className="text-xs text-neutral-400">
-                    Activated {formatDate(user.proActivatedAt)} • Lifetime Access
-                  </Text>
-                  <Text className="text-xs text-neutral-400">
-                    {calculateDaysSince(user.proActivatedAt)} days active
-                  </Text>
-                </View>
-                <View className="h-8 w-8 items-center justify-center rounded-full bg-rose-500/20">
-                  <Ionicons name="star" size={16} color="#FB7185" />
-                </View>
-              </View>
-            </View>
-          )}
-        </LinearGradient>
-      </Animated.View>
-    </Animated.View>
-  );
-};
+        </View>
+        
+        {/* Decorative Circles */}
+        <View className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+        <View className="absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/10" />
+      </LinearGradient>
+    </TouchableOpacity>
+  </Animated.View>
+);
 
 export default function UserProfile() {
   const router = useRouter();
-  const { logout, updateUser } = useAuth();
+  const { logout } = useAuth();
   const [user, setUser] = useAtom(userAtom);
-  const [proStatus, setProStatus] = useAtom(proStatusAtom);
   const { getProAccessInfo } = useProAccess();
+  
   const [refreshing, setRefreshing] = useState(false);
-  const [stats, setStats] = useState<ProfileStats | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [cancellationLoading, setCancellationLoading] = useState(false);
-  const scale = useSharedValue(1);
+  const [loading, setLoading] = useState(true);
+  
+  // Use the extended profile data structure from our new backend
+  const [profileData, setProfileData] = useState<any>(null);
 
-  // Get Pro access information
   const proInfo = getProAccessInfo();
 
-  // Calculate cancellation eligibility
-  const canCancelSubscription = () => {
-    if (!proInfo.hasProAccess || !user?.proActivatedAt) return false;
-    const daysSinceActivation = calculateDaysSince(user.proActivatedAt);
-    return daysSinceActivation <= 5;
-  };
-
-  const daysRemainingForCancellation = () => {
-    if (!user?.proActivatedAt) return 0;
-    const daysSinceActivation = calculateDaysSince(user.proActivatedAt);
-    return Math.max(0, 5 - daysSinceActivation);
-  };
-
-  useEffect(() => {
-    fetchUserProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchUserProfile = async () => {
+  const loadData = async () => {
     try {
-      setError(null);
-      setLoadingProfile(true);
-      const res = await api.get('/users/profile');
-      if (res.data?.success) {
-        const fresh = res.data.data;
-        setStats(fresh?.stats || null);
-        setUser(fresh);
-
-        // Update Pro status atom with fresh data
-        if (fresh) {
-          setProStatus({
-            isPro: fresh.isPro || false,
-            isProActive: fresh.isPro || false,
-            proExpiresAt: fresh.proExpiresAt ? new Date(fresh.proExpiresAt) : null,
-            proActivatedAt: fresh.proActivatedAt ? new Date(fresh.proActivatedAt) : null,
-            hasProAccess: fresh.isPro || false,
-            isPremium: fresh.isPremium || false,
-            isPremiumActive: fresh.isPremiumActive || false,
-            premiumExpiry: fresh.premiumExpiry ? new Date(fresh.premiumExpiry) : null,
-          });
-        }
-      } else {
-        setError('Failed to load profile');
+      const res = await fetchUserProfile();
+      if (res.success) {
+        setProfileData(res.data);
+        setUser(prev => ({ ...prev, ...res.data })); // Sync basic user data
       }
-    } catch (e: any) {
-      console.error('Failed to fetch profile:', e);
-      setError(e?.response?.data?.errors?.[0]?.msg || 'Failed to load profile');
+    } catch (error) {
+      console.error(error);
     } finally {
-      setLoadingProfile(false);
+      setLoading(false);
     }
   };
 
-  // Handle Pro subscription cancellation
-  const handleCancelSubscription = async () => {
-    Alert.alert(
-      'Cancel Pro Subscription',
-      `Are you sure you want to cancel your Pro subscription? This action cannot be undone.\n\nYou have ${daysRemainingForCancellation()} day(s) remaining to cancel.`,
-      [
-        {
-          text: 'Keep Pro',
-          style: 'cancel',
-        },
-        {
-          text: 'Cancel Subscription',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setCancellationLoading(true);
-              const result = await cancelProSubscription();
-
-              // Immediately update atoms to revoke Pro access
-              setProStatus({
-                isPro: false,
-                isProActive: false,
-                proExpiresAt: new Date(),
-                proActivatedAt: user?.proActivatedAt ? new Date(user.proActivatedAt) : null,
-                hasProAccess: false,
-                isPremium: false,
-                isPremiumActive: false,
-                premiumExpiry: null,
-              });
-
-              // Update user atom
-              if (user) {
-                setUser({
-                  ...user,
-                  isPro: false,
-                  isProActive: false,
-                  proExpiresAt: new Date().toISOString(),
-                });
-              }
-
-              Alert.alert(
-                'Subscription Cancelled',
-                'Your Pro subscription has been successfully cancelled. You now have access to free features only.',
-                [{ text: 'OK' }]
-              );
-            } catch (error: any) {
-              console.error('Cancellation error:', error);
-              Alert.alert(
-                'Cancellation Failed',
-                error.message || 'Failed to cancel subscription. Please try again.',
-                [{ text: 'OK' }]
-              );
-            } finally {
-              setCancellationLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchUserProfile();
+    await loadData();
     setRefreshing(false);
   };
 
-  const buttonAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.95);
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1);
-  };
-
-
-
-  // Enhanced logout handler with confirmation
   const handleLogout = () => {
-    Alert.alert(
-      'Logout Confirmation',
-      'Are you sure you want to logout? You will need to sign in again to access your account.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-          onPress: () => console.log('Logout cancelled'),
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-              // Navigation will be handled by the useAuth hook
-            } catch (error) {
-              console.error('Logout error:', error);
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
+    Alert.alert('Logout', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Logout', style: 'destructive', onPress: logout }
+    ]);
   };
-
-  const menuItems = [
-    {
-      title: 'Account Settings',
-      description: 'Manage your account preferences',
-      icon: 'settings-outline' as const,
-      route: '/profile',
-      colors: ['#6366F1', '#8B5CF6'] as const,
-      isActive: true,
-    },
-    {
-      title: 'Change Password',
-      description: 'Update your password',
-      icon: 'lock-closed-outline' as const,
-      route: '/profile/password',
-      colors: ['#F59E0B', '#EF4444'] as const,
-      isActive: user?.provider !== 'google',
-    },
-    {
-      title: 'Statistics',
-      description: 'View detailed performance stats',
-      icon: 'bar-chart-outline' as const,
-      route: '/profile/stats',
-      colors: ['#10B981', '#059669'] as const,
-      isActive: true,
-    },
-    {
-      title: 'Delete Account',
-      description: 'Permanently delete your account',
-      icon: 'trash-outline' as const,
-      route: '/profile/delete',
-      colors: ['#EF4444', '#DC2626'] as const,
-      isActive: false,
-    },
-  ];
-
-  // console.log(JSON.stringify(user, null, 2));
 
   return (
-    <SafeAreaView className="flex-1 bg-neutral-50">
+    <SafeAreaView className="flex-1 bg-neutral-50" edges={['top']}>
       <ScrollView
-        className="flex-1"
-        contentContainerClassName="pb-32"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#FB7185"
-            colors={['#FB7185']}
-          />
-        }
-        showsVerticalScrollIndicator={false}>
-        <View className="p-6">
-          {/* Error State */}
-          {!!error && (
-            <Animated.View
-              entering={FadeInDown.springify()}
-              className="mb-4 rounded-xl border border-red-500/30 bg-red-500/15 p-4">
-              <View className="mb-2 flex-row items-center">
-                <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
-                <Text className="ml-2 font-semibold text-red-400">Error</Text>
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" />}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
+        <View className="px-6 pt-4 pb-8">
+          <View className="flex-row justify-between items-center mb-6">
+            <Text className="text-3xl font-bold text-neutral-900">Profile</Text>
+            <TouchableOpacity onPress={() => router.push('/profile/settings')} className="p-2 bg-white rounded-full shadow-sm">
+                <Ionicons name="settings-outline" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
+
+          <View className="flex-row items-center">
+            <View className="relative">
+              <Image 
+                source={{ uri: user?.avatar || 'https://ui-avatars.com/api/?name=' + user?.name }} 
+                className="h-24 w-24 rounded-full border-4 border-white shadow-md"
+              />
+              <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full bg-indigo-500 border-2 border-white">
+                <Text className="text-xs font-bold text-white">{profileData?.gamification?.level || 1}</Text>
               </View>
-              <Text className="mb-3 text-red-300">{error}</Text>
-              <Button
-                title="Retry"
-                onPress={onRefresh}
-                className="self-start rounded-lg border border-red-500/30 bg-red-500/20 px-4 py-2"
-                textClassName="text-sm font-medium text-red-300"
-              />
-            </Animated.View>
-          )}
-
-          {/* Loading State */}
-          {loadingProfile ? (
-            <ProfileSkeleton />
-          ) : (
-            <>
-              {/* Profile Header */}
-              <ProfileHeader user={user} proInfo={proInfo} />
-
-          {/* Pro Subscription Management Section */}
-          {proInfo.hasProAccess && (
-            <Animated.View entering={FadeInDown.delay(200).springify()} className="mb-6">
-              <Text className="mb-4 text-xl font-bold text-neutral-800">Pro Subscription</Text>
-              <LinearGradient
-                colors={['#FB7185', '#F43F5E', '#E11D48']}
-                className="rounded-2xl p-5 shadow-lg overflow-hidden"
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}>
-                <View className="mb-4 flex-row items-center justify-between">
-                  <View>
-                    <Text className="text-lg font-bold text-white">Pro Active</Text>
-                    <Text className="text-sm text-white/80">Lifetime Access</Text>
-                  </View>
-                  <View className="h-12 w-12 items-center justify-center rounded-full bg-white/20">
-                    <Ionicons name="star" size={24} color="white" />
-                  </View>
-                </View>
-
-                {user?.proActivatedAt && (
-                  <View className="mb-4">
-                    <Text className="text-sm text-white/80">
-                      Activated: {formatDate(user.proActivatedAt)}
-                    </Text>
-                    <Text className="text-sm text-white/80">
-                      Active for {calculateDaysSince(user.proActivatedAt)} days
-                    </Text>
-                  </View>
-                )}
-
-                <View className="flex-row gap-3">
-                  <Button
-                    title="Payment History"
-                    onPress={() => router.push('/profile/payment-history' as any)}
-                    className="flex-1 rounded-xl bg-white/20 p-3"
-                    textClassName="text-sm font-medium text-white"
-                    leftIcon="receipt-outline"
-                    leftIconSize={16}
-                    leftIconColor="white"
-                  />
-
-                  {canCancelSubscription() && (
-                    <Button
-                      title={`Cancel (${daysRemainingForCancellation()}d left)`}
-                      onPress={handleCancelSubscription}
-                      disabled={cancellationLoading}
-                      className="flex-1 rounded-xl bg-white/20 p-3"
-                      textClassName="text-sm font-medium text-white"
-                      leftIcon="close-circle-outline"
-                      leftIconSize={16}
-                      leftIconColor="white"
-                    />
-                  )}
-                </View>
-
-                {cancellationLoading && (
-                  <View className="mt-3 flex-row items-center justify-center">
-                    <Text className="text-sm text-white/80">Processing cancellation...</Text>
-                  </View>
-                )}
-              </LinearGradient>
-            </Animated.View>
-          )}
-
-          {/* Enhanced Statistics Section */}
-          <Animated.View entering={FadeInDown.delay(300).springify()} className="mb-6">
-            <View className="mb-4 flex-row items-center justify-between">
-              <Text className="text-xl font-bold text-neutral-800">Statistics</Text>
-              <Button
-                title="View All"
-                onPress={() => router.push('/profile/stats' as any)}
-                className="flex-row items-center rounded-full bg-blue-500/20 px-3 py-1"
-                textClassName="mr-1 text-sm text-blue-400"
-                rightIcon="chevron-forward-outline"
-                rightIconSize={16}
-                rightIconColor="#60A5FA"
-              />
             </View>
+            <View className="ml-5 flex-1">
+              <Text className="text-2xl font-bold text-neutral-900">{user?.name}</Text>
+              <Text className="text-neutral-500">{user?.email}</Text>
+              <View className="mt-2 flex-row flex-wrap gap-2">
+                 {/* Badge Chip */}
+                 <View className="rounded-full bg-amber-100 px-3 py-1">
+                    <Text className="text-xs font-bold text-amber-700">
+                        {profileData?.gamification?.badge?.icon || '🥉'} {profileData?.gamification?.badge?.name || 'Novice'}
+                    </Text>
+                 </View>
+                 {/* Rank Chip */}
+                 <View className="rounded-full bg-slate-100 px-3 py-1">
+                    <Text className="text-xs font-bold text-slate-700">
+                        #{profileData?.gamification?.rank || '-'} Global
+                    </Text>
+                 </View>
+              </View>
+            </View>
+          </View>
+        </View>
 
-            <View className="flex-row flex-wrap gap-3">
-              <StatsCard
-                title="Quizzes Taken"
-                value={stats?.totalQuizzesTaken ?? user?.stats?.totalQuizzesTaken ?? 0}
-                colors={['#10B981', '#059669']}
-                icon="library-outline"
-                delay={100}
-              />
-              <StatsCard
-                title="Tests Taken"
-                value={stats?.totalTestsTaken ?? user?.stats?.totalTestsTaken ?? 0}
-                colors={['#06B6D4', '#0891B2']}
-                icon="document-text-outline"
-                delay={200}
-              />
-              <StatsCard
-                title="Average Score"
-                value={`${Math.round((stats?.averageScore ?? user?.stats?.averageScore ?? 0) as number)}%`}
-                colors={['#8B5CF6', '#7C3AED']}
-                icon="trophy-outline"
-                delay={300}
-              />
-              <StatsCard
-                title="Current Streak"
-                value={stats?.currentStreak ?? user?.stats?.currentStreak ?? 0}
-                colors={['#F59E0B', '#D97706']}
-                icon="flame-outline"
+        <View className="px-6">
+            {/* Pro Banner */}
+            <ProBanner 
+                hasPro={proInfo.hasProAccess} 
+                onPress={() => !proInfo.hasProAccess && router.push('/subscription')} 
+            />
+
+            {/* Stats Preview Card */}
+            <Animated.View entering={FadeInDown.delay(300).springify()} className="mb-6">
+                <TouchableOpacity 
+                    onPress={() => router.push('/profile/stats')}
+                    className="rounded-3xl bg-white p-5 shadow-sm border border-neutral-100"
+                >
+                    <View className="flex-row justify-between items-center mb-4">
+                        <Text className="text-lg font-bold text-neutral-800">Overview</Text>
+                        <Text className="text-indigo-600 font-semibold text-sm">See Details</Text>
+                    </View>
+                    <View className="flex-row justify-between">
+                        <View className="items-center flex-1">
+                            <Text className="text-2xl font-bold text-neutral-900">{profileData?.stats?.streak || 0}</Text>
+                            <Text className="text-xs text-neutral-400 font-medium uppercase tracking-wider">Streak</Text>
+                        </View>
+                        <View className="w-[1px] bg-neutral-100 h-full" />
+                        <View className="items-center flex-1">
+                            <Text className="text-2xl font-bold text-neutral-900">{profileData?.stats?.totalQuestions || 0}</Text>
+                            <Text className="text-xs text-neutral-400 font-medium uppercase tracking-wider">Questions</Text>
+                        </View>
+                        <View className="w-[1px] bg-neutral-100 h-full" />
+                        <View className="items-center flex-1">
+                            <Text className="text-2xl font-bold text-neutral-900">{profileData?.stats?.accuracy || 0}%</Text>
+                            <Text className="text-xs text-neutral-400 font-medium uppercase tracking-wider">Accuracy</Text>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </Animated.View>
+
+            <Text className="mb-4 text-lg font-bold text-neutral-800">Account</Text>
+
+            <MenuItem 
+                icon="person-outline" 
+                title="Personal Details" 
+                subtitle="Name, Bio, Avatar" 
+                color="#3B82F6" 
+                onPress={() => router.push('/profile/edit')}
                 delay={400}
-              />
-              <StatsCard
-                title="Correct Answers"
-                value={stats?.correctAnswers ?? user?.stats?.correctAnswers ?? 0}
-                colors={['#EF4444', '#DC2626']}
-                icon="checkmark-circle-outline"
+            />
+            <MenuItem 
+                icon="notifications-outline" 
+                title="Notifications" 
+                subtitle="Email & Push Preferences" 
+                color="#F59E0B" 
+                onPress={() => router.push('/profile/settings')}
                 delay={500}
-              />
-              <StatsCard
-                title="Total Answered"
-                value={stats?.totalQuestionsAnswered ?? user?.stats?.totalQuestionsAnswered ?? 0}
-                colors={['#A855F7', '#9333EA']}
-                icon="help-circle-outline"
+            />
+            <MenuItem 
+                icon="lock-closed-outline" 
+                title="Security" 
+                subtitle="Password & Authentication" 
+                color="#10B981" 
+                onPress={() => router.push('/profile/security')}
                 delay={600}
-              />
-            </View>
-          </Animated.View>
+            />
 
-
-
-          {/* Enhanced Account Section */}
-          <Animated.View entering={FadeInDown.delay(500).springify()} className="mb-6">
-            <Text className="mb-4 text-xl font-bold text-neutral-800">Account Settings</Text>
-            <View className="gap-2">
-              {menuItems.map((item) => (
-                item.isActive && ( // Only render active items
-                  <Button
-                    key={item.title}
-                    onPress={() => router.push(item.route as any)}
-                    onPressIn={handlePressIn}
-                    onPressOut={handlePressOut}
-                    className="overflow-hidden rounded-2xl bg-transparent p-0 "
-                    // Button supports children; render the existing gradient content
-                  >
-                    <LinearGradient
-                      colors={item.colors}
-                      className="flex-row items-center p-5 overflow-hidden rounded-2xl"
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      >
-                      <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-white/20">
-                        <Ionicons name={item.icon} size={24} color="white" />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="mb-1 text-lg font-bold text-white">{item.title}</Text>
-                        <Text className="text-sm text-white/80">{item.description}</Text>
-                      </View>
-                      <View className="h-8 w-8 items-center justify-center rounded-full bg-white/20">
-                        <Ionicons name="chevron-forward" size={18} color="white" />
-                      </View>
-                    </LinearGradient>
-                  </Button>
-                ) // End of conditional rendering for active items
-              ))}
-            </View>
-          </Animated.View>
-
-          {/* Enhanced Logout Section */}
-          <Animated.View entering={FadeInDown.delay(1000).springify()}>
-            <Animated.View style={buttonAnimatedStyle}>
-              <Button
-                title="Logout"
-                onPress={handleLogout}
-                className="flex-row items-center justify-center rounded-2xl border-2 border-red-500/30 bg-red-500 p-5 shadow-lg"
-                textClassName="text-lg font-bold text-red-100"
-                rightIcon="exit-outline"
-                rightIconSize={18}
-                rightIconColor="#FEE2E2"
-              />
+            <Animated.View entering={FadeInDown.delay(700).springify()} className="mt-4">
+                <TouchableOpacity 
+                    onPress={handleLogout}
+                    className="flex-row items-center justify-center rounded-2xl border-2 border-red-100 bg-red-50 p-4"
+                >
+                    <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+                    <Text className="ml-2 font-bold text-red-500">Log Out</Text>
+                </TouchableOpacity>
             </Animated.View>
-          </Animated.View>
-            </>
-          )}
+
+            <Text className="mt-8 text-center text-xs text-neutral-400">Version 1.0.0 • PhysioPrep</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

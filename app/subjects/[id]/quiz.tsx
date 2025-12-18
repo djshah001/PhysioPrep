@@ -30,6 +30,7 @@ import {
   handleSelect,
   handleSubmit,
 } from 'lib/QuizHandelers';
+import { QuizResultProps } from 'types/types';
 
 export default function SubjectQuizPage() {
   const { id: subjectId } = useLocalSearchParams<{ id: string }>();
@@ -42,7 +43,7 @@ export default function SubjectQuizPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
-  const [result, setResult] = useState<{ score: number; totalQuestions: number } | null>(null);
+  const [result, setResult] = useState<QuizResultProps | null>(null);
   const elapsed = useRef(0);
   // Use a ref for start time to avoid re-rendering the whole screen every second
   const startTimeRef = useRef<number | null>(null);
@@ -109,6 +110,7 @@ export default function SubjectQuizPage() {
     return (
       <QuizReview
         key={quiz.sessionId}
+        xpEarned={result.xpEarned}
         // actionSheetRef={actionSheetRef as React.RefObject<ActionSheetRef>}
         totalTime={elapsed.current}
         reviewQuestions={reviewQuestions}

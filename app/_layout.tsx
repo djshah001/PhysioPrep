@@ -18,10 +18,11 @@ import {
   showAppOpenAdOnFirstLaunchAtom,
   showAppOpenAdOnForegroundAtom,
 } from '../store/appOpenAd';
-import { SheetProvider } from 'react-native-actions-sheet';
+import { registerSheet, SheetProvider } from 'react-native-actions-sheet';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { fetchPublishableKey, STRIPE_CONFIG } from '../services/stripe';
 import { paymentProcessingAtom } from 'store/pro';
+import LevelUpAnimation from '~/ui/LevelUpAnimation';
 
 const adUnitId = __DEV__ ? TestIds.ADAPTIVE_BANNER : 'ca-app-pub-3904519861823527/4617728433';
 
@@ -154,5 +155,7 @@ const RootLayout = () => {
     </GestureHandlerRootView>
   );
 };
+
+registerSheet('level-up-animation', LevelUpAnimation);
 
 export default RootLayout;

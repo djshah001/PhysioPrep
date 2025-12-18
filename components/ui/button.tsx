@@ -59,7 +59,7 @@ export function Button({
         onPressOut={onPressOut}
         disabled={disabled || loading}
         className={cn(
-          'flex-row items-center justify-center gap-1 rounded-xl bg-primary px-4 py-3 shadow-xl shadow-primary',
+          'flex-row items-center justify-center gap-1 rounded-xl bg-blue-500 px-4 py-3 shadow-xl shadow-blue-500',
           disabled ? 'opacity-50' : 'opacity-100',
           className
         )}>

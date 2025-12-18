@@ -1,6 +1,6 @@
 import { RefObject } from 'react';
 import { ActionSheetRef } from 'react-native-actions-sheet';
-import { Quiz, quizAnswerType } from 'types/types';
+import { Quiz, quizAnswerType, QuizResultProps } from 'types/types';
 import { quizApi } from '~/api';
 import { handleError } from './utils';
 
@@ -51,7 +51,7 @@ export const handleSubmit = async (
   answers: quizAnswerType[],
   quiz: Quiz,
   setSubmitting: (submitting: boolean) => void,
-  setResult: (result: { score: number; totalQuestions: number }) => void,
+  setResult: (result: QuizResultProps) => void,
   elapsed: RefObject<number>,
   startTimeRef: RefObject<number | null>,
   setShowSubmissionModal: (show: boolean) => void
@@ -71,7 +71,7 @@ export const handleSubmit = async (
 
   try {
     const res = await quizApi.submitQuiz(quiz.sessionId, { answers, timeSpent });
-    setResult({ score: res.data.data.score, totalQuestions: res.data.data.totalQuestions });
+    setResult(res.data.data);
     setShowSubmissionModal(true);
   } catch (err) {
     // restore running timer if submission failed so user can retry

@@ -1,3 +1,5 @@
+import { BadgeDetails } from 'store/home';
+
 export interface Category {
   id: string;
   name: string;
@@ -115,6 +117,39 @@ export interface Question {
 export interface quizAnswerType {
   questionId: string;
   selectedAnswer: number;
+}
+
+export interface QuizReviewProps {
+  reviewQuestions: {
+    question: Question;
+    isCorrect?: boolean;
+    userAnswer?: quizAnswerType;
+  }[];
+  userAnswers: quizAnswerType[] | number[];
+  onBack?: () => void;
+  totalTime: number;
+  xpEarned?: number; // XP earned from this quiz
+}
+
+export interface QuizResultProps {
+  score: number;
+  correctAnswers: number;
+  totalQuestions: number;
+  xpEarned: number;
+
+  // Gamification Data
+  level: number;
+  leveledUp: boolean;
+  streak: number;
+
+  badge: BadgeDetails;
+  newBadgeEarned: BadgeDetails | null; // Send object if new badge, null otherwise
+
+  progress: {
+    current: number;
+    total: number;
+    percent: number;
+  }; // { current, total, percent }
 }
 
 export type TopicFormValues = {

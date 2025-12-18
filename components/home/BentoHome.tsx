@@ -1,10 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  Pressable,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Link, useRouter } from 'expo-router';
 import api from 'services/api';
 import { useAtom } from 'jotai';
-import { dailyQuestionVisibleAtom, homeStatsAtom } from 'store/home';
+import { dailyQuestionVisibleAtom } from 'store/home';
 import { Button } from '~/ui/button';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ProgressBar } from '~/ProgressBar';
@@ -17,36 +25,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BentoHomeSkeleton from '~/skeletons/BentoHomeSkeleton';
 import ProButton from '../ui/ProButton';
 import ProUpgradeSheet from '../pro/ProUpgradeSheet';
+import XPLevelCard from '../ui/XPLevelCard';
+import { useXPLevel } from '../../hooks/useXPLevel';
 
 export default function BentoHome() {
   const router = useRouter();
-  const [stats, setStats] = useAtom(homeStatsAtom);
-  const [loading, setLoading] = useState(true);
   const [dqVisible, setDqVisible] = useAtom(dailyQuestionVisibleAtom);
   const insets = useSafeAreaInsets();
   const proUpgradeSheetRef = useRef<ActionSheetRef>(null);
 
-  const run = async (isMounted: boolean) => {
-    try {
-      setLoading(true);
-      const res = await api.get('/users/me/stats');
-      setStats(res.data?.data || null);
-    } catch (e) {
-      console.error('Failed to fetch stats:', e);
-      // noop
-    } finally {
-      if (isMounted) setLoading(false);
-    }
+  // Use XP Level hook for stats and level-up management
+  const { stats, loading, refreshStats } = useXPLevel();
+
+  const run = async () => {
+    await refreshStats();
   };
 
   useEffect(() => {
-    let isMounted = true;
-    run(isMounted);
-    return () => {
-      isMounted = false;
-    };
+    run();
     // eslint-disable-next-line
-  }, [setStats, setLoading]);
+  }, []);
 
   if (loading) {
     return <BentoHomeSkeleton />;
@@ -54,18 +52,18 @@ export default function BentoHome() {
 
   return (
     <ScrollView
-      className="flex-1 bg-background p-4"
+      className="bg-background p-4"
+      contentContainerClassName="pb-32"
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={loading}
-          onRefresh={() => run(true)}
+          onRefresh={() => run()}
           colors={[colors.blue[500], colors.rose[500]]}
         />
       }>
       <>
-        {/* Bento Grid */}
-        <View style={{ paddingTop: insets.top, marginBottom: 16 }}>
+       <View style={{ paddingTop: insets.top, marginBottom: 16 }}>
           <Text className=" font-bold text-blue-500" style={{ fontSize: 32 }}>
             PhysioPrep
           </Text>
@@ -83,8 +81,8 @@ export default function BentoHome() {
                 </Text>
               </Text>
               <Text className="text-sm text-blue-100">
-                Accuracy {stats?.accuracyPercentage ?? 0}% · Avg time{' '}
-                {stats?.averageTimePerQuestion ?? 0}s
+                Accuracy {stats?.accuracyPercentage ?? 0}% 
+                {/* · Avg time {stats?.averageTimePerQuestion}s */}
               </Text>
             </View>
           </Animated.View>
@@ -114,6 +112,22 @@ export default function BentoHome() {
             </Animated.View>
           </View>
         </View>
+        {/* Second Row: XP/Level and Daily Question */}
+        <View className="flex-row">
+          {/* Left: XP/Level Card */}
+          <View className="flex-1">
+            <XPLevelCard
+              xp={stats?.xp ?? 0}
+              level={stats?.level ?? 1}
+              xpToNextLevel={stats?.xpToNextLevel ?? 1000}
+              xpInCurrentLevel={stats?.xpInCurrentLevel ?? 0}
+              levelProgressPercent={stats?.levelProgressPercent ?? 0}
+              hasLeveledUp={stats?.hasLeveledUp ?? false}
+              currentBadge={stats?.currentBadge}
+              variant="compact"
+            />
+          </View>
+        </View>
       </>
 
       {/* Embedded Daily Question inside Home */}
@@ -140,12 +154,12 @@ export default function BentoHome() {
           <Text className="text-md font-bold text-slate-400">Favorite Subjects</Text>
         </View>
         <View className="flex-row flex-wrap gap-3">
-          {stats?.favoriteSubjects?.slice(0, 4).map((s) => (
+          {stats?.favoriteSubjects?.slice(0, 4).map((s: any) => (
             <View
-              key={s.id}
+              key={s?.id}
               className="w-[48%] flex-row items-center gap-2 rounded-2xl bg-white p-4 shadow-md shadow-slate-600">
-              <Text className="rounded-full bg-rose-500 px-3.5 py-2 text-white">{s.name[0]}</Text>
-              <Text className="text-lg font-bold text-slate-700">{s.name}</Text>
+              <Text className="rounded-full bg-rose-500 px-3.5 py-2 text-white">{s?.name[0]}</Text>
+              <Text className="text-lg font-bold text-slate-700">{s?.name}</Text>
               {/* <Text className="text-sm text-white">
                 {JSON.stringify(s)}
               </Text> */}
@@ -192,31 +206,35 @@ export default function BentoHome() {
 
         <View className=" gap-3">
           <View className="flex-row flex-wrap gap-3">
-            {stats?.questionsSolvedPerSubject?.slice(0, 6).map((s, idx) => 
-
-              {
+            {(Array.isArray(stats?.questionsSolvedPerSubject)
+              ? stats.questionsSolvedPerSubject
+              : []
+            )
+              .slice(0, 6)
+              .map((s: any, idx: number) => {
                 const percentage = s.totalQuestions > 0 ? (s.solved / s.totalQuestions) * 100 : 0;
                 return (
-              <Pressable
-                onPress={() => router.push(`/subjects/${s.id}`)}
-                key={idx}
-                className="w-[48%] rounded-2xl bg-white p-4 shadow-md shadow-slate-600">
-                <View className="mb-2 flex-row items-center justify-between">
-                  <Text className="text-md font-bold text-slate-700">{s.name}</Text>
-                  <Text style={{ fontSize: 13, color: '#64748B' }}>
-                    {(percentage).toFixed(1)}%
-                  </Text>
-                </View>
-                <ProgressBar value={percentage} />
-              </Pressable>
-              );
-              }
-            )}
+                  <Pressable
+                    onPress={() => router.push(`/subjects/${s.id}`)}
+                    key={idx}
+                    className="w-[48%] rounded-2xl bg-white p-4 shadow-md shadow-slate-600">
+                    <View className="mb-2 flex-row items-center justify-between">
+                      <Text className="text-md font-bold text-slate-700">{s.name}</Text>
+                      <Text style={{ fontSize: 13, color: '#64748B' }}>
+                        {percentage.toFixed(1)}%
+                      </Text>
+                    </View>
+                    <ProgressBar value={percentage} />
+                  </Pressable>
+                );
+              })}
           </View>
         </View>
       </Animated.View>
 
       <View className="h-32" />
+
+
       {/* Pro Upgrade Sheet */}
       <ProUpgradeSheet ref={proUpgradeSheetRef} />
     </ScrollView>
@@ -259,8 +277,7 @@ function DailyQuestionCard({ onClose }: { onClose: () => void }) {
       } catch {
         // console.error('Failed to fetch daily question:', e);
         setState((s) => ({ ...s, question: null, hasAnswered: false }));
-      }
-      finally {
+      } finally {
         setLoading(false);
       }
     };
@@ -408,9 +425,6 @@ function DailyQuestionCard({ onClose }: { onClose: () => void }) {
         title="Explanation"
         html={state.question?.explanationHtml || ''}
       />
-
-      
     </>
   );
 }
-

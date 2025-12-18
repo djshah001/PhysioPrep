@@ -1,5 +1,6 @@
 import { atomWithStorage } from 'jotai/utils';
 import { useAtom } from 'jotai';
+import { UserHomeStats } from './home';
 
 export interface UserPreferences {
   notifications: boolean;
@@ -23,8 +24,13 @@ export interface User {
   name: string;
   email: string;
   role: 'user' | 'admin';
-  isPremium: boolean;
-  isPremiumActive: boolean;
+  xp: number;
+  level: number;
+  currentBadge: string;
+  xpToNextLevel: number;
+  xpInCurrentLevel: number;
+  levelProgressPercent: number;
+  hasLeveledUp: boolean;
   // Pro subscription fields
   isPro: boolean;
   isProActive: boolean;
@@ -33,7 +39,7 @@ export interface User {
   hasProAccess: boolean;
   isEmailVerified: boolean;
   preferences: UserPreferences;
-  stats: UserStats;
+  stats: UserHomeStats;
   avatar: string | null;
   premiumExpiry: string | null;
   provider?: 'local' | 'google';

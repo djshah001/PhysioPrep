@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
 import { Button } from '../ui/button';
 import { Ionicons } from '@expo/vector-icons';
 import colors from 'tailwindcss/colors';
@@ -6,9 +6,12 @@ import colors from 'tailwindcss/colors';
 import { Question, quizAnswerType } from 'types/types';
 import { CustomHeader } from '~/common/CustomHeader';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useForeground } from '~/useForground';
 import { useProAccess } from '../../hooks/useProAccess';
+import { useXPEarningActivity, formatXPDisplay } from '../../hooks/useXPLevel';
+import RenderHTML from 'react-native-render-html';
+import { customHTMLElementModels, renderers, tagsStyles } from 'lib/HtmlRenderers';
 
 interface QuizReviewProps {
   reviewQuestions: {
@@ -20,6 +23,7 @@ interface QuizReviewProps {
   userAnswers: quizAnswerType[] | number[];
   onBack?: () => void;
   totalTime: number;
+  xpEarned?: number; // XP earned from this quiz
 }
 
 const formatSeconds = (seconds: number) => {
@@ -30,11 +34,21 @@ const formatSeconds = (seconds: number) => {
 
 const adUnitId = __DEV__ ? TestIds.ADAPTIVE_BANNER : 'ca-app-pub-3904519861823527/4809014719';
 
-const QuizReview = ({ reviewQuestions, userAnswers, onBack, totalTime }: QuizReviewProps) => {
+const QuizReview = ({ reviewQuestions, userAnswers, onBack, totalTime, xpEarned }: QuizReviewProps) => {
+  
+  // console.log('Total Time:', totalTime);
+  // console.log('XP Earned:', xpEarned);
+
   // Calculate summary
-  const correctCount = reviewQuestions.reduce((sum, q, i) => sum + (q.isCorrect ? 1 : 0), 0);
+  const correctCount = reviewQuestions.reduce((sum, q) => sum + (q.isCorrect ? 1 : 0), 0);
   const incorrectCount = reviewQuestions.length - correctCount;
   const score = Math.round((correctCount / reviewQuestions.length) * 100);
+
+  // XP and level management
+  const { onXPEarned } = useXPEarningActivity();
+
+  // Calculate XP earned based on performance if not provided
+  const calculatedXP = xpEarned || (correctCount * 10 + (score >= 80 ? 20 : 0)); // 10 XP per correct + bonus for high score
 
   const { shouldShowAds } = useProAccess();
   const bannerRef = useRef<BannerAd>(null);
@@ -44,6 +58,13 @@ const QuizReview = ({ reviewQuestions, userAnswers, onBack, totalTime }: QuizRev
       bannerRef.current?.load();
     }
   });
+
+  // Trigger XP earning when component mounts
+  useEffect(() => {
+    onXPEarned();
+  }, [onXPEarned]);
+
+  const { width } = useWindowDimensions();
 
   return (
     <View className="flex-1 bg-background">
@@ -75,6 +96,12 @@ const QuizReview = ({ reviewQuestions, userAnswers, onBack, totalTime }: QuizRev
                 Score: <Text className="font-semibold ">{score}%</Text>
               </Text>
             </View>
+            <View className="mb-2 flex-row items-center">
+              <Ionicons name="star-outline" size={18} color={colors.yellow[400]} />
+              <Text className="ml-2 text-base text-yellow-400">
+                XP Earned: <Text className="font-semibold">{formatXPDisplay(calculatedXP)}</Text>
+              </Text>
+            </View>
             {shouldShowAds() && (
               <BannerAd ref={bannerRef} unitId={adUnitId} size={BannerAdSize.MEDIUM_RECTANGLE} />
             )}
@@ -95,10 +122,22 @@ const QuizReview = ({ reviewQuestions, userAnswers, onBack, totalTime }: QuizRev
               key={idx}
               className="mb-6 overflow-hidden rounded-3xl bg-white p-4 shadow-lg shadow-neutral-800 ">
               <View className="mb-2 items-center justify-between p-3">
-                <Text className="flex-1 justify-center text-lg font-bold text-primary ">
-                  <Text className="text-2xl font-bold leading-6 ">{idx + 1}. </Text>
-                  {q.text}
-                </Text>
+                <View className=" justify-center text-lg font-bold text-primary ">
+                  {/* <Text className="text-2xl font-bold leading-6 ">{idx + 1}. </Text> */}
+                  <RenderHTML
+                    contentWidth={width - 48} // Account for padding
+                    source={{ html: q.textHtml as string }}
+                    customHTMLElementModels={customHTMLElementModels}
+                    renderers={renderers}
+                    tagsStyles={tagsStyles}
+                    systemFonts={['System']}
+                    enableExperimentalMarginCollapsing
+                    defaultTextProps={{ selectable: false }}
+                    renderersProps={{
+                      img: { enableExperimentalPercentWidth: true },
+                    }}
+                  />
+                </View>
                 <View
                   className={`mt-2 self-start rounded-full border px-2 py-1 ${isCorrect ? 'border-green-100 bg-green-100' : 'border-red-100 bg-red-100'}`}>
                   <Text
@@ -167,6 +206,7 @@ const QuizReview = ({ reviewQuestions, userAnswers, onBack, totalTime }: QuizRev
           <Button title="Back" onPress={onBack} className="my-4" />
         </View>
       )}
+
     </View>
   );
 };

@@ -1,380 +1,219 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useUser } from '../../store/auth';
-import { userApi } from '../../services/api';
-import UserStatsSkeleton from '../skeletons/UserStatsSkeleton';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { fetchUserStats, UserStatsResponse } from 'actions/user';
 
-interface RecentActivityItem {
-  questionId: string;
-  subjectId: string | null;
-  isCorrect: boolean;
-  timeSpent: number;
-  attemptedAt: string;
-}
+// --- Components ---
 
-interface FavoriteSubject {
-  id: string;
-  name: string;
-  attempts: number;
-  correct: number;
-  accuracy: number;
-}
-
-interface DetailedStats {
-  totalCorrectlyAnswered: number;
-  totalQuestionAttempts: number;
-  totalQuestions: number;
-  currentStreak: number;
-  accuracyPercentage: number;
-  questionsAnsweredToday: number;
-  averageTimePerQuestion: number;
-  favoriteSubjects: FavoriteSubject[];
-  questionsSolvedPerSubject: any[];
-  recentActivity: RecentActivityItem[];
-}
-
-export default function UserStats() {
-  const [user] = useUser();
-  const [detailedStats, setDetailedStats] = useState<DetailedStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
+const ProgressBar = ({ percent, color = '#6366F1' }: { percent: number; color?: string }) => {
+  const width = useSharedValue(0);
   useEffect(() => {
-    const fetchDetailedStats = async () => {
-      try {
-        setError('');
-        setLoading(true);
-        const response = await userApi.getStats();
-        if (response.data?.success) {
-          setDetailedStats(response.data.data);
-        } else {
-          setError('Failed to load detailed statistics');
-        }
-      } catch (err: any) {
-        console.error('Failed to fetch detailed stats:', err);
-        setError(err?.response?.data?.errors?.[0]?.msg || 'Failed to load statistics');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDetailedStats();
-  }, []);
-
-  if (loading) {
-    return <UserStatsSkeleton />;
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView className="flex-1 bg-neutral-50">
-        <View className="p-6">
-          <Text className="text-red-500 text-center">{error}</Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="mt-4 bg-blue-500 rounded-xl p-3"
-          >
-            <Text className="text-white text-center font-medium">Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Use basic stats from user atom if available, otherwise show loading
-  const basicStats = user?.stats;
+    width.value = withTiming(percent, { duration: 1000 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [percent]);
+  const style = useAnimatedStyle(() => ({ width: `${width.value}%`, backgroundColor: color }));
 
   return (
-    <SafeAreaView className="flex-1 bg-neutral-50">
+    <View className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
+      <Animated.View className="h-full rounded-full" style={style} />
+    </View>
+  );
+};
+
+const StatCard = ({ label, value, icon, color, delay }: any) => (
+  <Animated.View
+    entering={FadeInDown.delay(delay).springify()}
+    className="mb-3 w-[48%] overflow-hidden rounded-2xl border border-neutral-50 bg-white p-4 shadow-sm">
+    <View
+      className="mb-3 h-10 w-10 items-center justify-center rounded-full"
+      style={{ backgroundColor: `${color}15` }}>
+      <Ionicons name={icon} size={20} color={color} />
+    </View>
+    <Text className="text-2xl font-bold text-neutral-800">{value}</Text>
+    <Text className="text-xs font-medium uppercase tracking-wide text-neutral-400">{label}</Text>
+  </Animated.View>
+);
+
+const SubjectRow = ({ subject, maxVal }: any) => (
+  <View className="mb-4">
+    <View className="mb-1 flex-row justify-between">
+      <Text className="text-sm font-semibold text-neutral-700">{subject.name}</Text>
+      <Text className="text-xs font-bold text-neutral-500">{subject.solved} Solved</Text>
+    </View>
+    <ProgressBar percent={(subject.solved / maxVal) * 100} color={subject.color} />
+  </View>
+);
+
+export default function UserStats() {
+  const router = useRouter();
+  const [stats, setStats] = useState<UserStatsResponse['data'] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadStats = async () => {
+    try {
+      const res = await fetchUserStats();
+      if (res.success) setStats(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadStats();
+    setRefreshing(false);
+  };
+
+  if (!stats) return <View className="flex-1 bg-neutral-50" />;
+
+  // Calculate Max for relative bars
+  const maxSubjectQuestions = Math.max(
+    ...(stats.questionsSolvedPerSubject?.map((s) => s.solved) || [10])
+  );
+
+  return (
+    <SafeAreaView className="flex-1 bg-neutral-50" edges={['top']}>
       {/* Header */}
-      <Animated.View
-        entering={FadeInDown.delay(100).springify()}
-        className="px-6 py-4 bg-white border-b border-neutral-200 flex-row items-center"
-      >
+      <View className="flex-row items-center border-b border-neutral-200 bg-white px-6 py-4">
         <TouchableOpacity
           onPress={() => router.back()}
-          className="mr-4 p-2 rounded-full bg-neutral-100"
-        >
+          className="mr-4 rounded-full bg-neutral-100 p-2">
           <Ionicons name="arrow-back" size={20} color="#374151" />
         </TouchableOpacity>
-        <View className="flex-1">
-          <Text className="text-2xl font-bold text-neutral-800">Statistics</Text>
-          <Text className="text-sm text-neutral-500">Your learning progress</Text>
-        </View>
-      </Animated.View>
+        <Text className="text-xl font-bold text-neutral-900">Your Statistics</Text>
+      </View>
 
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 20 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Main Statistics Cards */}
-        <Animated.View entering={FadeInDown.delay(200).springify()} className="px-6 py-4">
-          <Text className="text-xl font-bold text-neutral-800 mb-4">Overview</Text>
-
-          <View className="flex-row flex-wrap gap-3">
-            {/* Total Questions Answered */}
-            <View className="w-[48%] overflow-hidden rounded-2xl">
-              <LinearGradient
-                colors={['#10B981', '#059669']}
-                className="p-4 "
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Ionicons name="checkmark-circle" size={24} color="white" className="mb-2" />
-                <Text className="text-white text-lg font-bold">
-                  {detailedStats?.totalCorrectlyAnswered || basicStats?.correctAnswers || 0}
+        contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}>
+        {/* XP & Level Card */}
+        <Animated.View entering={FadeInDown.delay(100).springify()} className="mb-6">
+          <LinearGradient
+            colors={['#4F46E5', '#4338CA']}
+            className="rounded-3xl p-6 shadow-lg shadow-indigo-200"
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}>
+            <View className="mb-6 flex-row items-start justify-between">
+              <View>
+                <Text className="mb-1 font-medium text-indigo-200">Current Level</Text>
+                <Text className="text-4xl font-black text-white">{stats.level}</Text>
+                <Text className="mt-1 text-xs text-indigo-200">
+                  {stats.currentBadge?.name} Rank
                 </Text>
-                <Text className="text-white/80 text-xs">Correct Answers</Text>
-              </LinearGradient>
+              </View>
+              <View className="h-16 w-16 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
+                <Text className="text-3xl">{stats.currentBadge?.icon || '🏆'}</Text>
+              </View>
             </View>
 
-            {/* Total Attempts */}
-            <View className="w-[48%] overflow-hidden rounded-2xl">
-              <LinearGradient
-                colors={['#3B82F6', '#2563EB']}
-                className="p-4 "
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Ionicons name="help-circle" size={24} color="white" className="mb-2" />
-                <Text className="text-white text-lg font-bold">
-                  {detailedStats?.totalQuestionAttempts || basicStats?.totalQuestionsAnswered || 0}
+            <View>
+              <View className="mb-2 flex-row justify-between">
+                <Text className="text-xs font-bold text-indigo-200">
+                  {stats.xpInCurrentLevel} XP
                 </Text>
-                <Text className="text-white/80 text-xs">Total Attempts</Text>
-              </LinearGradient>
+                <Text className="text-xs font-bold text-indigo-200">{stats.xpToNextLevel} XP</Text>
+              </View>
+              <View className="h-3 overflow-hidden rounded-full border border-white/10 bg-black/20">
+                <View
+                  className="h-full rounded-full bg-white"
+                  style={{ width: `${stats.levelProgressPercent}%` }}
+                />
+              </View>
+              <Text className="mt-2 text-center text-xs text-indigo-300">
+                {stats.xpToNextLevel - stats.xpInCurrentLevel} XP needed for Level {stats.level + 1}
+              </Text>
             </View>
-
-            {/* Current Streak */}
-            <View className="w-[48%] overflow-hidden rounded-2xl">
-              <LinearGradient
-                colors={['#F59E0B', '#D97706']}
-                className="p-4 "
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Ionicons name="flame" size={24} color="white" className="mb-2" />
-                <Text className="text-white text-lg font-bold">
-                  {detailedStats?.currentStreak || basicStats?.currentStreak || 0}
-                </Text>
-                <Text className="text-white/80 text-xs">Current Streak</Text>
-              </LinearGradient>
-            </View>
-
-            {/* Accuracy */}
-            <View className="w-[48%] overflow-hidden rounded-2xl">
-              <LinearGradient
-                colors={['#8B5CF6', '#7C3AED']}
-                className="p-4 "
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Ionicons name="analytics" size={24} color="white" className="mb-2" />
-                <Text className="text-white text-lg font-bold">
-                  {detailedStats?.accuracyPercentage ||
-                   (basicStats?.correctAnswers && basicStats?.totalQuestionsAnswered
-                     ? Math.round((basicStats.correctAnswers / basicStats.totalQuestionsAnswered) * 100)
-                     : 0)}%
-                </Text>
-                <Text className="text-white/80 text-xs">Accuracy</Text>
-              </LinearGradient>
-            </View>
-
-            {/* Average Time */}
-            <View className="w-[48%] overflow-hidden rounded-2xl">
-              <LinearGradient
-                colors={['#06B6D4', '#0891B2']}
-                className="p-4 "
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Ionicons name="time" size={24} color="white" className="mb-2" />
-                <Text className="text-white text-lg font-bold">
-                  {detailedStats?.averageTimePerQuestion ? `${Math.round(detailedStats.averageTimePerQuestion)}s` : 'N/A'}
-                </Text>
-                <Text className="text-white/80 text-xs">Avg Time</Text>
-              </LinearGradient>
-            </View>
-
-            {/* Today's Questions */}
-            <View className="w-[48%] overflow-hidden rounded-2xl">
-              <LinearGradient
-                colors={['#EF4444', '#DC2626']}
-                className="p-4 "
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Ionicons name="calendar-outline" size={24} color="white" className="mb-2" />
-                <Text className="text-white text-lg font-bold">
-                  {detailedStats?.questionsAnsweredToday || 0}
-                </Text>
-                <Text className="text-white/80 text-xs">Today</Text>
-              </LinearGradient>
-            </View>
-          </View>
+          </LinearGradient>
         </Animated.View>
 
-        {/* Performance Breakdown */}
-        {detailedStats && (
-          <Animated.View entering={FadeInDown.delay(300).springify()} className="px-6 py-4">
-            <Text className="text-xl font-bold text-neutral-800 mb-4">Performance Breakdown</Text>
+        {/* Grid Stats */}
+        <View className="mb-2 flex-row flex-wrap justify-between">
+          <StatCard
+            label="Total Questions"
+            value={stats.totalQuestionAttempts}
+            icon="layers"
+            color="#3B82F6"
+            delay={200}
+          />
+          <StatCard
+            label="Accuracy"
+            value={`${stats.accuracyPercentage}%`}
+            icon="disc"
+            color="#10B981"
+            delay={250}
+          />
+          <StatCard
+            label="Current Streak"
+            value={stats.currentStreak}
+            icon="flame"
+            color="#F59E0B"
+            delay={300}
+          />
+          <StatCard
+            label="Today's Activity"
+            value={stats.questionsAnsweredToday}
+            icon="calendar"
+            color="#EC4899"
+            delay={350}
+          />
+        </View>
 
-            <View className="gap-3">
-              {/* Quiz Performance */}
-              <View className="overflow-hidden rounded-2xl">
-                <LinearGradient
-                  colors={['#F9FAFB', '#F3F4F6']}
-                  className="p-4"
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <View className="flex-row items-center justify-between mb-3">
-                    <Text className="text-lg font-semibold text-neutral-800">Quiz Performance</Text>
-                    <Text className="text-sm text-neutral-500">{basicStats?.totalQuizzesTaken || 0} taken</Text>
-                  </View>
-                  <View className="bg-neutral-200 h-2 rounded-full mb-2">
-                    <View
-                      className="bg-blue-500 h-2 rounded-full"
-                      style={{ width: `${basicStats?.averageScore || 0}%` }}
-                    />
-                  </View>
-                  <View className="flex-row justify-between">
-                    <Text className="text-sm text-neutral-600">Average Score</Text>
-                    <Text className="text-sm font-medium text-neutral-800">{basicStats?.averageScore || 0}%</Text>
-                  </View>
-                </LinearGradient>
-              </View>
+        {/* Subject Performance */}
+        <Animated.View
+          entering={FadeInDown.delay(400).springify()}
+          className="mb-6 rounded-3xl border border-neutral-100 bg-white p-6 shadow-sm">
+          <Text className="mb-6 text-lg font-bold text-neutral-800">Subject Mastery</Text>
+          {stats.questionsSolvedPerSubject.map((subj) => (
+            <SubjectRow key={subj.id} subject={subj} maxVal={maxSubjectQuestions} />
+          ))}
+        </Animated.View>
 
-              {/* Test Performance */}
-              <View className="overflow-hidden rounded-2xl">
-                <LinearGradient
-                  colors={['#F9FAFB', '#F3F4F6']}
-                  className="p-4"
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <View className="flex-row items-center justify-between mb-3">
-                    <Text className="text-lg font-semibold text-neutral-800">Test Performance</Text>
-                    <Text className="text-sm text-neutral-500">{basicStats?.totalTestsTaken || 0} taken</Text>
-                  </View>
-                  <View className="bg-neutral-200 h-2 rounded-full mb-2">
-                    <View
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ width: `${basicStats?.averageScore || 0}%` }}
-                    />
-                  </View>
-                  <View className="flex-row justify-between">
-                    <Text className="text-sm text-neutral-600">Average Score</Text>
-                    <Text className="text-sm font-medium text-neutral-800">{basicStats?.averageScore || 0}%</Text>
-                  </View>
-                </LinearGradient>
-              </View>
-
-              {/* Streak Performance */}
-              <View className="overflow-hidden rounded-2xl">
-                <LinearGradient
-                  colors={['#F9FAFB', '#F3F4F6']}
-                  className="p-4"
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <View className="flex-row items-center justify-between mb-3">
-                    <Text className="text-lg font-semibold text-neutral-800">Streak Performance</Text>
-                    <Text className="text-sm text-neutral-500">Best: {basicStats?.longestStreak || 0}</Text>
-                  </View>
-                  <View className="bg-neutral-200 h-2 rounded-full mb-2">
-                    <View
-                      className="bg-orange-500 h-2 rounded-full"
-                      style={{ width: `${Math.min((basicStats?.currentStreak || 0) / Math.max(basicStats?.longestStreak || 1, 1) * 100, 100)}%` }}
-                    />
-                  </View>
-                  <View className="flex-row justify-between">
-                    <Text className="text-sm text-neutral-600">Current Streak</Text>
-                    <Text className="text-sm font-medium text-neutral-800">{basicStats?.currentStreak || 0} days</Text>
-                  </View>
-                </LinearGradient>
-              </View>
-            </View>
-          </Animated.View>
-        )}
-
-        {/* Recent Activity */}
-        {detailedStats?.recentActivity && detailedStats.recentActivity.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(400).springify()} className="px-6 py-4">
-            <Text className="text-xl font-bold text-neutral-800 mb-4">Recent Activity</Text>
-
-            <View className="gap-3">
-              {detailedStats.recentActivity.slice(0, 5).map((activity, index) => (
-                <View key={index} className="flex-row items-center p-3 bg-white rounded-xl shadow-sm">
-                  <View className={`w-10 h-10 rounded-full mr-3 items-center justify-center ${
-                    activity.isCorrect ? 'bg-green-100' : 'bg-red-100'
-                  }`}>
-                    <Ionicons
-                      name={activity.isCorrect ? "checkmark" : "close"}
-                      size={16}
-                      color={activity.isCorrect ? "#059669" : "#DC2626"}
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-sm font-medium text-neutral-800">
-                      Question {activity.isCorrect ? 'Correct' : 'Incorrect'}
-                    </Text>
-                    <Text className="text-xs text-neutral-500">
-                      {new Date(activity.attemptedAt).toLocaleDateString()} • {activity.timeSpent}s
-                    </Text>
-                  </View>
-                  <View className={`px-2 py-1 rounded-full ${
-                    activity.isCorrect ? 'bg-green-100' : 'bg-red-100'
-                  }`}>
-                    <Text className={`text-xs font-medium ${
-                      activity.isCorrect ? 'text-green-700' : 'text-red-700'
-                    }`}>
-                      {activity.isCorrect ? '✓' : '✗'}
-                    </Text>
-                  </View>
+        {/* Recent Activity List */}
+        <Animated.View
+          entering={FadeInDown.delay(500).springify()}
+          className="rounded-3xl border border-neutral-100 bg-white p-6 shadow-sm">
+          <Text className="mb-4 text-lg font-bold text-neutral-800">Recent Activity</Text>
+          {stats.recentActivity.length === 0 ? (
+            <Text className="py-4 text-center text-neutral-400">No recent activity found.</Text>
+          ) : (
+            stats.recentActivity.map((activity, index) => (
+              <View
+                key={index}
+                className="flex-row items-center border-b border-neutral-50 py-3 last:border-0">
+                <View
+                  className={`mr-4 h-10 w-10 items-center justify-center rounded-full ${activity.isCorrect ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <Ionicons
+                    name={activity.isCorrect ? 'checkmark' : 'close'}
+                    size={18}
+                    color={activity.isCorrect ? '#10B981' : '#EF4444'}
+                  />
                 </View>
-              ))}
-            </View>
-          </Animated.View>
-        )}
-
-        {/* Favorite Subjects */}
-        {detailedStats?.favoriteSubjects && detailedStats.favoriteSubjects.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(500).springify()} className="px-6 py-4">
-            <Text className="text-xl font-bold text-neutral-800 mb-4">Favorite Subjects</Text>
-
-            <View className="flex-row flex-wrap gap-3">
-              {detailedStats.favoriteSubjects.slice(0, 4).map((subject, index) => (
-                <View key={subject.id} className="w-[48%] overflow-hidden rounded-2xl">
-                  <LinearGradient
-                    colors={['#FEF3C7', '#FDE68A']}
-                    className="p-4 h-28"
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <View className="w-6 h-6 bg-yellow-500 rounded-full mb-2 items-center justify-center">
-                      <Text className="text-white text-xs font-bold">{index + 1}</Text>
-                    </View>
-                    <Text className="text-yellow-800 text-sm font-semibold mb-1" numberOfLines={1}>
-                      {subject.name}
-                    </Text>
-                    <Text className="text-yellow-700 text-xs">
-                      {subject.attempts} attempts
-                    </Text>
-                    <Text className="text-yellow-700 text-xs">
-                      {subject.accuracy}% accuracy
-                    </Text>
-                  </LinearGradient>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-neutral-800">
+                    {activity.subjectName}
+                  </Text>
+                  <Text className="text-xs text-neutral-400">
+                    {new Date(activity.createdAt).toLocaleDateString()} • {activity.timeSpent}s
+                  </Text>
                 </View>
-              ))}
-            </View>
-          </Animated.View>
-        )}
+              </View>
+            ))
+          )}
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
