@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, TouchableOpacity, Platform, StyleSheet, Dimensions } from 'react-native';
+import { TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -96,7 +96,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
   
   // Logic to hide tab bar on specific screens
   // We use an "Allow List" approach based on your previous code
-  const visibleRoutes = ['/', '/home', '/subjects', '/explore', '/quiz', '/profile', '/comprehensive-test'];
+  const visibleRoutes = ['/', '/home', '/subjects', '/explore', '/quiz', '/profile'];
   
   // Check if current path matches strictly or is the index
   const isVisible = visibleRoutes.includes(pathname) || pathname === '/';
@@ -164,6 +164,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         animation: 'shift',
+        // headerStyle: { backgroundColor: 'transparent',marginBottom: 0,paddingBottom: 0},
       }}>
       
       <Tabs.Screen

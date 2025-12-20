@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, Pressable, View, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,275 +7,257 @@ import Animated, {
   withTiming,
   withSequence,
   Easing,
+  interpolate,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAtom } from 'jotai';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+// Store Imports
 import { hasProAccessAtom, proUpgradeSheetVisibleAtom } from '../../store/pro';
 import { userAtom } from '../../store/auth';
 
+// --- Configuration ---
+
+type VariantType = 'gold' | 'indigo' | 'black';
+
+interface VariantConfig {
+  // Slightly brighter gradients for flat design
+  gradient: readonly [string, string];
+  // Colored shadow for glow effect
+  shadowColor: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+}
+
+const VARIANTS: Record<VariantType, VariantConfig> = {
+  gold: {
+    gradient: ['#FBBF24', '#EA580C'], // Amber-400 -> Orange-600
+    shadowColor: '#F59E0B',
+    icon: 'crown',
+  },
+  indigo: {
+    gradient: ['#818CF8', '#4F46E5'], // Indigo-400 -> Indigo-600
+    shadowColor: '#6366F1',
+    icon: 'star-four-points',
+  },
+  black: {
+    gradient: ['#374151', '#111827'], // Gray-700 -> Gray-900
+    shadowColor: '#374151',
+    icon: 'lightning-bolt',
+  },
+};
+
 interface ProButtonProps {
-  size?: 'small' | 'medium' | 'large';
-  variant?: 'primary' | 'secondary' | 'minimal';
+  variant?: VariantType;
+  text?: string;
+  subtext?: string;
   onPress?: () => void;
   disabled?: boolean;
-  showIcon?: boolean;
-  text?: string;
+  className?: string;
+  size?: 'normal' | 'large';
 }
 
 const ProButton: React.FC<ProButtonProps> = ({
-  size = 'medium',
-  variant = 'primary',
+  variant = 'gold',
+  text = 'UNLOCK PRO',
+  subtext,
   onPress,
   disabled = false,
-  showIcon = true,
-  text = 'Upgrade to Pro',
+  className = '',
+  size = 'normal',
 }) => {
   const [user] = useAtom(userAtom);
   const [hasProAccess] = useAtom(hasProAccessAtom);
   const [, setProUpgradeSheetVisible] = useAtom(proUpgradeSheetVisibleAtom);
 
-  // Check if user has pro access from user data or pro status
   const userHasProAccess = user?.hasProAccess || user?.isProActive || hasProAccess;
 
-  // Animation values
+  // --- Animations ---
   const scale = useSharedValue(1);
-  const shimmerX = useSharedValue(-100);
-  const glowOpacity = useSharedValue(0.3);
-  const glowScale = useSharedValue(1);
+  const shimmer = useSharedValue(0);
 
-  // Start animations on mount
   useEffect(() => {
-   
-    // Glow pulse effect - breathing effect
-    glowOpacity.value = withRepeat(
-      withSequence(
-        withTiming(0.8, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0.3, { duration: 1800, easing: Easing.inOut(Easing.sin) })
-      ),
-      -1,
-      true
-    );
+    if (disabled) return;
 
-    // Glow scale effect - subtle size pulsing
-    glowScale.value = withRepeat(
-      withSequence(
-        withTiming(1.05, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
-        withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) })
-      ),
-      -1,
-      true
-    );
-
+    // 1. Subtle Breathing
     scale.value = withRepeat(
       withSequence(
-        withTiming(1.04, { duration: 1000, easing: Easing.inOut(Easing.sin) }),
-        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.sin) })
+        withTiming(1.05, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
       true
     );
 
-  }, [ glowOpacity, glowScale, scale]);
-
-  useEffect(() => {
-     // Shimmer effect - smooth sweep across button
-    shimmerX.value = withRepeat(
+    // 2. Periodic Shimmer
+    shimmer.value = withRepeat(
       withSequence(
-        withTiming(200, { duration: 2500, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-        withTiming(-100, { duration: 0 })
+        withTiming(1, { duration: 1200, easing: Easing.linear }),
+        withTiming(0, { duration: 0 }),
+        withTiming(0, { duration: 3000 }) // Wait 3s
       ),
-      -1,
-      false
+      -1
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled]);
 
-  }, [shimmerX]);
+  const handlePressIn = () => {
+    scale.value = withTiming(0.97, { duration: 100 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withTiming(1, { duration: 150 });
+  };
 
   const handlePress = () => {
     if (disabled) return;
-
-    // Scale animation on press
-    scale.value = withSequence(
-      withTiming(0.95, { duration: 100 }),
-      withTiming(1, { duration: 100 })
-    );
-
     if (onPress) {
       onPress();
     } else {
-      // Default action: show upgrade sheet
       setProUpgradeSheetVisible(true);
     }
   };
 
-  // Animated styles
-  const buttonAnimatedStyle = useAnimatedStyle(() => ({
+  // --- Animated Styles ---
+  const containerStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
+    opacity: disabled ? 0.7 : 1,
   }));
 
-  const shimmerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shimmerX.value }],
-  }));
+  const shimmerStyle = useAnimatedStyle(() => {
+    const translateX = interpolate(shimmer.value, [0, 1], [-50, 300]);
+    return {
+      transform: [{ translateX }, { skewX: '-25deg' }],
+      opacity: interpolate(shimmer.value, [0, 0.5, 1], [0, 0.3, 0]),
+    };
+  });
 
-  const glowAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-    transform: [{ scale: glowScale.value }],
-  }));
+  if (userHasProAccess) return null;
 
-  const iconAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: 1,
-  }));
-
-  // Don't show button if user already has pro access
-  if (userHasProAccess) {
-    return null;
-  }
-
-  // Size configurations
-  const sizeConfig = {
-    small: {
-      container: 'px-3 py-2 rounded-lg',
-      text: 'text-xs font-semibold',
-      icon: 14,
-    },
-    medium: {
-      container: 'px-5 py-3 rounded-xl',
-      text: 'text-sm font-bold',
-      icon: 16,
-    },
-    large: {
-      container: 'px-6 py-4 rounded-2xl',
-      text: 'text-base font-bold',
-      icon: 20,
-    },
-  };
-
-  // Variant configurations
-  const variantConfig = {
-    primary: {
-      gradient: ['#FFD700', '#FFA500', '#FF6B35'] as const,
-      textColor: 'text-white',
-      shadowColor: '#FFD700',
-    },
-    secondary: {
-      gradient: ['#667eea', '#764ba2'] as const,
-      textColor: 'text-white',
-      shadowColor: '#667eea',
-    },
-    minimal: {
-      gradient: ['#1f2937', '#374151'] as const,
-      textColor: 'text-yellow-400',
-      shadowColor: '#FFD700',
-    },
-  };
-
-  const config = sizeConfig[size];
-  const variantStyle = variantConfig[variant];
+  const config = VARIANTS[variant];
+  const height = size === 'large' ? 56 : 48;
+  const borderRadius = 16; // Perfect pill shape
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       disabled={disabled}
-      activeOpacity={0.8}
-      style={{ opacity: disabled ? 0.5 : 1 }}
+      className={className}
     >
-      <Animated.View style={buttonAnimatedStyle}>
-        <View style={{ position: 'relative' }}>
-          {/* Glow effect */}
-          {/* <Animated.View
-            style={[
-              glowAnimatedStyle,
-              {
-                position: 'absolute',
-                top: -6,
-                left: -6,
-                right: -6,
-                bottom: -6,
-                borderRadius: size === 'large' ? 22 : size === 'medium' ? 18 : 14,
-              }
-            ]}
-          >
-            <LinearGradient
-              colors={variantStyle.gradient}
-              style={{
-                width: '100%',
-                height: '100%',
-                borderRadius: size === 'large' ? 22 : size === 'medium' ? 18 : 14,
-                shadowColor: variantStyle.gradient[0],
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.6,
-                shadowRadius: 8,
-              }}
-            />
-          </Animated.View> */}
-
-          {/* Main button */}
-          <LinearGradient
-            colors={variantStyle.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              borderRadius: size === 'large' ? 16 : size === 'medium' ? 12 : 8,
-              paddingHorizontal: size === 'large' ? 24 : size === 'medium' ? 20 : 16,
-              paddingVertical: size === 'large' ? 16 : size === 'medium' ? 12 : 8,
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Shimmer overlay */}
-            <Animated.View
-              style={[
-                shimmerAnimatedStyle,
-                {
-                  position: 'absolute',
-                  top: 0,
-                  bottom: 0,
-                  width: 50,
-                  transform: [{ skewX: '12deg' }],
-                }
-              ]}
-            >
+      <Animated.View 
+        style={[
+          styles.glowContainer, 
+          containerStyle, 
+          { shadowColor: config.shadowColor }
+        ]}
+      >
+        <LinearGradient
+          colors={config.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }} // Diagonal gradient for more life
+          style={[
+            styles.gradientBody,
+            { height, borderRadius }
+          ]}
+        >
+          
+          {/* Shimmer Overlay */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Animated.View style={[styles.shimmer, shimmerStyle]}>
               <LinearGradient
-                colors={['transparent', 'rgba(255, 255, 255, 0.4)', 'transparent']}
+                colors={['transparent', 'white', 'transparent']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                }}
+                style={{ flex: 1 }}
               />
             </Animated.View>
+          </View>
 
-            {/* Button content */}
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}>
-              {showIcon && (
-                <Animated.View style={iconAnimatedStyle}>
-                  <Ionicons
-                    name="diamond"
-                    size={config.icon}
-                    color="white"
-                  />
-                </Animated.View>
-              )}
-              <Text style={{
-                color: 'white',
-                fontSize: size === 'large' ? 16 : size === 'medium' ? 14 : 12,
-                fontWeight: 'bold',
-              }}>
-                {text}
-              </Text>
+          {/* Centered Content */}
+          <View style={styles.contentRow}>
+            <MaterialCommunityIcons 
+              name={config.icon} 
+              size={size === 'large' ? 22 : 18} 
+              color="white" 
+              style={styles.icon}
+            />
+
+            <View style={styles.textContainer}>
+                <Text style={[styles.mainText, { fontSize: size === 'large' ? 16 : 14 }]}>
+                    {text}
+                </Text>
+                {subtext && (
+                    <Text style={styles.subText}>{subtext}</Text>
+                )}
             </View>
-          </LinearGradient>
-        </View>
+          </View>
+          
+          {/* Glass Edge Border (Inner Ring) */}
+          <View style={[styles.glassBorder, { borderRadius }]} pointerEvents="none" />
+
+        </LinearGradient>
       </Animated.View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
+
+const styles = StyleSheet.create({
+  glowContainer: {
+    // Colored glow effect instead of dark shadow
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  gradientBody: {
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  shimmer: {
+    ...StyleSheet.absoluteFillObject,
+    width: '50%',
+  },
+  glassBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.2)', // Subtle white inner border
+  },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center', // Centered horizontally
+    zIndex: 10,
+  },
+  icon: {
+    marginRight: 8,
+    shadowColor: 'black',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+  },
+  textContainer: {
+    alignItems: 'center', // Center text vertically if subtext exists
+  },
+  mainText: {
+    color: 'white',
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    textShadowColor: 'rgba(0,0,0,0.15)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  subText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+});
 
 export default ProButton;

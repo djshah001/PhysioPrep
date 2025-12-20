@@ -5,7 +5,6 @@ import { BlurView } from 'expo-blur';
 import { Colors } from 'constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import colors from 'tailwindcss/colors';
 
 interface HeaderIcon {
   name: keyof typeof Ionicons.glyphMap;

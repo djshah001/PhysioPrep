@@ -138,7 +138,7 @@ export default function BentoHome() {
       )}
 
       {/* Pro Upgrade Button */}
-      <Animated.View entering={FadeInDown.delay(250).springify()} style={{ marginTop: 24 }}>
+      <Animated.View entering={FadeInDown.delay(250).springify()} style={{ marginTop: 16 }}>
         <ProButton
           size="large"
           text="Upgrade to Pro ✨"

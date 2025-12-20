@@ -1,44 +1,80 @@
-import { useEffect } from 'react';
+import React, { useEffect} from 'react';
 import { View, Text, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { CustomHeader } from 'components/common/CustomHeader';
-import { Colors } from 'constants/Colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown, FadeInUp} from 'react-native-reanimated';
+import RenderHtml from 'react-native-render-html';
 import { useAtom, useSetAtom } from 'jotai';
+import colors from 'tailwindcss/colors';
+
+// Store & Hooks
 import {
   topicDetailsAtom,
   loadingTopicDetailsAtom,
   errorTopicDetailsAtom,
   fetchTopicDetailsAtom,
 } from 'store/subject';
-import RenderHtml from 'react-native-render-html';
-import { customHTMLElementModels, renderers, tagsStyles } from 'lib/HtmlRenderers';
-import { Button } from '~/ui/button';
 import { loadRewardedAdAtom, rewardedAdLoadedAtom, showRewardedAdAtom } from 'store/rewardedAd';
 import { useProAccess } from '~/useProAccess';
+
+// Components & Libs
+import { Button } from '~/ui/button';
+import { CustomHeader } from 'components/common/CustomHeader';
+import { customHTMLElementModels, renderers, tagsStyles } from 'lib/HtmlRenderers';
+
+// --- Helper Components ---
+
+const StatBox = ({ icon, label, value, color, delay }: any) => (
+  <Animated.View 
+    entering={FadeInUp.delay(delay).springify()}
+    className="flex-1 items-center justify-center bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mx-1"
+  >
+    <View className={`p-2 rounded-full mb-2 ${color.bg}`}>
+      <MaterialCommunityIcons name={icon} size={20} color={color.text} />
+    </View>
+    <Text className="text-lg font-bold text-slate-800">{value}</Text>
+    <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">{label}</Text>
+  </Animated.View>
+);
+
+const InfoRow = ({ label, value, icon }: any) => (
+  <View className="flex-row items-center justify-between py-3 border-b border-slate-50 last:border-0">
+    <View className="flex-row items-center">
+      <MaterialCommunityIcons name={icon} size={16} color={colors.slate[400]} />
+      <Text className="ml-2 text-slate-500 font-medium">{label}</Text>
+    </View>
+    <Text className="text-slate-700 font-semibold">{value}</Text>
+  </View>
+);
+
+// --- Main Page ---
 
 export default function TopicDetailsPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { topicId } = useLocalSearchParams<{ id: string; topicId: string }>();
+  const insets = useSafeAreaInsets();
 
-  // Jotai atoms
+  // Atoms
   const [topic] = useAtom(topicDetailsAtom);
   const [loading] = useAtom(loadingTopicDetailsAtom);
   const [error] = useAtom(errorTopicDetailsAtom);
   const fetchTopicDetails = useSetAtom(fetchTopicDetailsAtom);
 
-  // Use shared rewarded ad state
+  // Ads
   const [rewardedAdLoaded] = useAtom(rewardedAdLoadedAtom);
   const loadRewardedAd = useSetAtom(loadRewardedAdAtom);
   const showRewardedAd = useSetAtom(showRewardedAdAtom);
   const { shouldShowAds } = useProAccess();
 
-  // Fetch topic details
   useEffect(() => {
-    if (!topicId) return;
-    fetchTopicDetails(topicId, false);
+    if (topicId) fetchTopicDetails(topicId, false);
   }, [topicId, fetchTopicDetails]);
+
+  useFocusEffect(() => {
+    if (shouldShowAds()) loadRewardedAd();
+  });
 
   const handleTakeQuiz = async () => {
     if (!topic) return;
@@ -48,182 +84,180 @@ export default function TopicDetailsPage() {
     router.push(`/topics/${topic._id}/quiz`);
   };
 
-  useFocusEffect(() => {
-    // Load ad when screen comes into focus
-    if (shouldShowAds()) {
-      loadRewardedAd();
-    }
-  });
-
-  // console.log(topic?.descriptionHtml);
-
+  // --- Loading State ---
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text className="mt-4 text-foreground/60">Loading topic details...</Text>
+      <View className="flex-1 items-center justify-center bg-slate-50">
+        <ActivityIndicator size="large" color={colors.indigo[600]} />
+        <Text className="mt-4 font-medium text-slate-500">Loading Content...</Text>
       </View>
     );
   }
 
+  // --- Error State ---
   if (error || !topic) {
     return (
-      <View className="flex-1 items-center justify-center bg-background px-6">
-        <Ionicons name="alert-circle-outline" size={64} color={Colors.destructive} />
-        <Text className="mt-4 text-center text-xl font-semibold text-foreground">
-          {error || 'Topic not found'}
+      <View className="flex-1 items-center justify-center bg-slate-50 p-6">
+        <View className="bg-red-50 p-6 rounded-full mb-6">
+            <Ionicons name="alert-circle" size={48} color={colors.red[500]} />
+        </View>
+        <Text className="text-xl font-bold text-slate-800 text-center mb-2">
+          {error || 'Topic Not Found'}
         </Text>
-        <Text className="mt-2 text-center text-foreground/60">
-          Unable to load topic details. Please try again.
+        <Text className="text-slate-500 text-center mb-8">
+          We couldn&apost load the details for this topic.
         </Text>
         <Button
           title="Go Back"
           onPress={() => router.back()}
-          className="mt-6"
-          leftIcon="arrow-back-outline"
+          className="bg-slate-800 px-8"
+          textClassName="text-white"
+          leftIcon="arrow-back"
         />
       </View>
     );
   }
 
-  // console.log(JSON.stringify(topic, null, 2));
-
   return (
-    <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
+    <View className="flex-1 bg-slate-50">
       <CustomHeader title="Topic Details" showBack />
-      <View className="p-6">
-        {/* Topic Header */}
-        <View className="mb-6 rounded-3xl bg-white p-6 shadow">
-          <View className="mb-4 flex-row items-start justify-between">
-            <View className="flex-1">
-              <Text className="mb-2 text-2xl font-bold text-neutral-800">{topic.topicName}</Text>
+      
+      <ScrollView 
+        contentContainerStyle={{ paddingBottom: 140 }} 
+        showsVerticalScrollIndicator={false}
+      >
+        {/* --- Hero Section --- */}
+        <View className="px-6 mt-4 pt-6 pb-2">
+            <Animated.View entering={FadeInDown.delay(100).springify()}>
+                <View className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100 relative overflow-hidden">
+                    {/* Background Decor */}
+                    <View className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-50 rounded-full opacity-50" />
+                    
+                    <View className="flex-row justify-between items-start mb-4">
+                        <View className="flex-1">
+                             <Text className="text-2xl font-black text-slate-800 leading-tight mb-2">
+                                {topic.topicName}
+                            </Text>
+                            <View className="flex-row gap-2 flex-wrap">
+                                <View className={`px-2.5 py-1 rounded-full flex-row items-center ${topic.isActive ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                                    <View className={`w-1.5 h-1.5 rounded-full mr-1.5 ${topic.isActive ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                    <Text className={`text-[10px] font-bold uppercase ${topic.isActive ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                        {topic.isActive ? 'Active' : 'Inactive'}
+                                    </Text>
+                                </View>
+                                {/* <View className={`px-2.5 py-1 rounded-full border ${topic.isPremium ? 'bg-amber-50 border-amber-100' : 'bg-blue-50 border-blue-100'}`}>
+                                    <Text className={`text-[10px] font-bold uppercase ${topic.isPremium ? 'text-amber-700' : 'text-blue-700'}`}>
+                                        {topic.isPremium ? 'Premium' : 'Free'}
+                                    </Text>
+                                </View> */}
+                            </View>
+                        </View>
+                        <View className="bg-slate-50 p-3 rounded-xl">
+                            <MaterialCommunityIcons name="book-open-page-variant" size={24} color={colors.indigo[500]} />
+                        </View>
+                    </View>
 
-              {/* Status Badges */}
-              <View className="flex-row items-center gap-2">
-                <Text
-                  className={`rounded-full px-3 py-1 text-xs font-bold ${
-                    topic.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
-                  {topic.isActive ? 'Active' : 'Inactive'}
-                </Text>
-                <Text
-                  className={`rounded-full px-3 py-1 text-xs font-bold ${
-                    topic.isPremium ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
-                  }`}>
-                  {topic.isPremium ? 'Premium' : 'Free'}
-                </Text>
-              </View>
-
-              {/* Subject Info */}
-              {/* <Text className="ml-1 text-base text-neutral-600">
-                Subject: {typeof topic.subject === 'object' ? topic.subject.name : topic.subject}
-              </Text> */}
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          {/* <View className="flex-row gap-3"> */}
-          <Button
-            title="Take Topic Quiz "
-            onPress={handleTakeQuiz}
-            className="flex-1 rounded-2xl bg-indigo-600/80 shadow-md"
-            textClassName="text-white text-lg font-bold"
-            rightIcon="play-outline"
-            // leftIconColor={colors.blue[600]}
-            disabled={!rewardedAdLoaded && shouldShowAds()}
-            loading={!rewardedAdLoaded && shouldShowAds()}
-          />
-          {/* <Button
-              title="Take Test"
-              onPress={handleTakeTest}
-              className="flex-1 rounded-xl bg-green-100 py-3"
-              rightIcon="clipboard-outline"
-              rightIconColor={colors.green[700]}
-              textClassName="text-green-700"
-            /> */}
-          {/* </View> */}
+                    {/* Stats Grid */}
+                    {topic.stats && (
+                        <View className="flex-row gap-2 mt-4 pt-4 border-t border-slate-50">
+                             <View className="flex-1 items-center">
+                                <Text className="text-lg font-bold text-slate-800">{topic.questionCount || 0}</Text>
+                                <Text className="text-[10px] text-slate-400 uppercase font-bold">Questions</Text>
+                             </View>
+                             <View className="w-[1px] h-full bg-slate-100" />
+                             <View className="flex-1 items-center">
+                                <Text className="text-lg font-bold text-slate-800">{Math.round(topic.stats.averageScore || 0)}%</Text>
+                                <Text className="text-[10px] text-slate-400 uppercase font-bold">Avg Score</Text>
+                             </View>
+                             <View className="w-[1px] h-full bg-slate-100" />
+                             <View className="flex-1 items-center">
+                                <Text className="text-lg font-bold text-slate-800">{Math.round(topic.stats.completionRate || 0)}%</Text>
+                                <Text className="text-[10px] text-slate-400 uppercase font-bold">Complete</Text>
+                             </View>
+                        </View>
+                    )}
+                </View>
+            </Animated.View>
         </View>
 
-        {/* Enhanced HTML Content Rendering */}
-        {topic.descriptionHtml ? (
-          <View className="mb-4 rounded-3xl bg-white p-4 shadow">
-            <Text className="mb-1 ml-2 text-lg font-semibold text-neutral-800">Notes</Text>
-            <View className="rounded-2xl bg-neutral-100 p-4">
-              <RenderHtml
-                contentWidth={width - 80} // Account for padding
-                source={{ html: topic.descriptionHtml }}
-                customHTMLElementModels={customHTMLElementModels}
-                renderers={renderers}
-                tagsStyles={tagsStyles}
-                systemFonts={['System']}
-                defaultTextProps={{
-                  selectable: false,
-                }}
-                // Ignore problematic elements that don't render properly
-                ignoredDomTags={['colgroup', 'col', 'label']}
-              />
-            </View>
-          </View>
-        ) : (
-          <Text className="mb-4 text-lg font-semibold text-neutral-800">No notes available</Text>
-        )}
-
-        {/* Statistics Section */}
-        {topic.stats && (
-          <View className="mb-6 rounded-3xl bg-gray-800 p-6 shadow-lg shadow-neutral-500">
-            <Text className="mb-4 text-lg font-semibold text-foreground">Statistics</Text>
-            <View className="space-y-3">
-              {topic.questionCount !== undefined && (
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-foreground/70">Total Questions</Text>
-                  <Text className="font-semibold text-foreground">{topic.questionCount}</Text>
-                </View>
-              )}
-
-              <View className="flex-row items-center justify-between">
-                <Text className="text-foreground/70">Average Score</Text>
-                <Text className="font-semibold text-foreground">
-                  {Math.round(topic.stats.averageScore)}%
-                </Text>
-              </View>
-
-              {topic.stats.completionRate !== undefined && (
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-foreground/70">Completion Rate</Text>
-                  <Text className="font-semibold text-foreground">
-                    {Math.round(topic.stats.completionRate)}%
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* Topic Metadata */}
-        <View className="rounded-2xl bg-grey6 p-6 shadow">
-          <Text className="mb-4 text-lg font-semibold text-foreground">Details</Text>
-          <View className="space-y-3">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-foreground/70">Created</Text>
-              <Text className="font-medium text-foreground">
-                {new Date(topic.createdAt).toLocaleDateString()}
-              </Text>
-            </View>
-
-            <View className="flex-row items-center justify-between">
-              <Text className="text-foreground/70">Last Updated</Text>
-              <Text className="font-medium text-foreground">
-                {new Date(topic.updatedAt).toLocaleDateString()}
-              </Text>
-            </View>
-
-            <View className="flex-row items-center justify-between">
-              <Text className="text-foreground/70">Topic ID</Text>
-              <Text className="font-mono text-sm text-foreground/60">{topic._id}</Text>
-            </View>
-          </View>
+        {/* --- Content / Notes Section --- */}
+        <View className="px-6 mt-4">
+            <Animated.View entering={FadeInDown.delay(200).springify()}>
+                <Text className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3 ml-1">Study Notes</Text>
+                
+                {topic.descriptionHtml ? (
+                    <View className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100">
+                        <RenderHtml
+                            contentWidth={width - 88}
+                            source={{ html: topic.descriptionHtml }}
+                            customHTMLElementModels={customHTMLElementModels}
+                            renderers={renderers}
+                            tagsStyles={{
+                                ...tagsStyles,
+                                p: { fontSize: 16, lineHeight: 26, color: '#334155', marginBottom: 12 },
+                                h1: { fontSize: 22, fontWeight: 'bold', color: '#1e293b', marginBottom: 10 },
+                                h2: { fontSize: 20, fontWeight: 'bold', color: '#1e293b', marginBottom: 8 },
+                                li: { fontSize: 16, lineHeight: 26, color: '#334155' }
+                            }}
+                            systemFonts={['System']}
+                            defaultTextProps={{ selectable: false }}
+                            ignoredDomTags={['colgroup', 'col', 'label']}
+                        />
+                    </View>
+                ) : (
+                    <View className="bg-white rounded-[24px] p-8 items-center border border-slate-100 border-dashed">
+                        <MaterialCommunityIcons name="text-box-remove-outline" size={32} color={colors.slate[300]} />
+                        <Text className="text-slate-400 mt-2 font-medium">No study notes available.</Text>
+                    </View>
+                )}
+            </Animated.View>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* --- Metadata Section --- */}
+        <View className="px-6 mt-6">
+            <Animated.View entering={FadeInDown.delay(300).springify()}>
+                <View className="bg-slate-100/50 rounded-2xl p-4 border border-slate-100">
+                    <InfoRow 
+                        label="Created Date" 
+                        value={new Date(topic.createdAt).toLocaleDateString()} 
+                        icon="calendar-plus" 
+                    />
+                    <InfoRow 
+                        label="Last Updated" 
+                        value={new Date(topic.updatedAt).toLocaleDateString()} 
+                        icon="calendar-sync" 
+                    />
+                    <InfoRow 
+                        label="Reference ID" 
+                        value={topic._id.slice(-8).toUpperCase()} 
+                        icon="identifier" 
+                    />
+                </View>
+            </Animated.View>
+        </View>
+
+      </ScrollView>
+
+      {/* --- Sticky Footer CTA --- */}
+      <Animated.View 
+        entering={FadeInUp.delay(500)}
+        className="absolute bottom-0 w-full bg-white border-t border-slate-100 px-6 pt-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]"
+        style={{ paddingBottom: insets.bottom + 10 }}
+      >
+        <Button
+          title="Start Quiz"
+          onPress={handleTakeQuiz}
+          className="w-full bg-indigo-600 rounded-2xl py-4 shadow-lg shadow-indigo-200"
+          textClassName="text-white font-bold text-lg"
+          rightIcon="arrow-forward"
+          disabled={!rewardedAdLoaded && shouldShowAds()}
+          loading={!rewardedAdLoaded && shouldShowAds()}
+        />
+        <Text className="text-center text-[10px] text-slate-400 mt-3">
+            {shouldShowAds() ? 'Ad supported • ' : ''}Ready to test your knowledge?
+        </Text>
+      </Animated.View>
+
+    </View>
   );
 }

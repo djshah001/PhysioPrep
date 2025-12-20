@@ -1,107 +1,141 @@
-import { Text, ActivityIndicator, Pressable } from 'react-native';
+import React, { forwardRef } from 'react';
+import { Text, ActivityIndicator, Pressable, View, PressableProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { cn } from 'lib/utils';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import { cn } from 'lib/utils'; // Assuming this is tailwind-merge/clsx
 
-interface ButtonProps {
+// Define Icon type to allow a name string or a custom component
+type IconType = keyof typeof Ionicons.glyphMap | React.ReactElement;
+
+interface ButtonProps extends Omit<PressableProps, 'style'> {
   title?: string;
-  onPress: () => void;
-  disabled?: boolean;
+  loading?: boolean;
   className?: string;
   textClassName?: string;
-  loading?: boolean;
-  leftIcon?: keyof typeof Ionicons.glyphMap | null | React.ReactElement;
+  // Icon Props
+  leftIcon?: IconType;
   leftIconSize?: number;
   leftIconColor?: string;
-  rightIcon?: keyof typeof Ionicons.glyphMap | null | React.ReactElement;
+  rightIcon?: IconType;
   rightIconSize?: number;
   rightIconColor?: string;
-  children?: React.ReactNode;
-  onPressIn?: () => void;
-  onPressOut?: () => void;
 }
 
-export function Button({
-  title,
-  onPress,
-  disabled = false,
-  className = '',
-  textClassName = '',
-  loading = false,
-  leftIcon = null,
-  leftIconSize = 20,
-  leftIconColor = 'white',
-  rightIcon = null,
-  rightIconSize = 20,
-  rightIconColor = 'white',
-  children,
-  onPressIn,
-  onPressOut,
-}: ButtonProps) {
-  const scale = useSharedValue(1);
+export const Button = forwardRef<View, ButtonProps>(
+  (
+    {
+      title,
+      onPress,
+      onPressIn,
+      onPressOut,
+      disabled = false,
+      loading = false,
+      className,
+      textClassName,
+      leftIcon,
+      leftIconSize = 20,
+      leftIconColor = 'white',
+      rightIcon,
+      rightIconSize = 20,
+      rightIconColor = 'white',
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    const scale = useSharedValue(1);
 
-  const buttonAnimatedStyle = useAnimatedStyle(() => {
-    return {
+    const animatedStyle = useAnimatedStyle(() => ({
       transform: [{ scale: scale.value }],
-    };
-  });
+    }));
 
-  return (
-    <Animated.View style={buttonAnimatedStyle}>
-      <Pressable
-        onPress={() => {
-          scale.value = withTiming(0.9, { duration: 120 }, () => {
-            scale.value = withTiming(1, { duration: 120 });
-          });
-          onPress();
-        }}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        disabled={disabled || loading}
-        className={cn(
-          'flex-row items-center justify-center gap-1 rounded-xl bg-blue-500 px-4 py-3 shadow-xl shadow-blue-500',
-          disabled ? 'opacity-50' : 'opacity-100',
-          className
-        )}>
-        {loading ? (
-          <ActivityIndicator color="white" />
-        ) : (
-          <>
-            {/** If children provided, render them verbatim so Button can be used as a wrapper for complex UIs */}
-            {children ? (
-              children
-            ) : (
-              <>
-                {leftIcon && typeof leftIcon === 'string' ? (
-                  <Ionicons
-                    name={typeof leftIcon === 'string' ? leftIcon : 'chevron-forward-outline'}
-                    size={leftIconSize}
-                    color={leftIconColor}
-                    className=""
-                  />
-                ) : (
-                  leftIcon
-                )}
-                {title ? (
-                  <Text className={cn('text-base font-semibold leading-6 text-white ', textClassName)}>
-                    {title}
-                  </Text>
-                ) : null}
-                {rightIcon && typeof rightIcon === 'string' ? (
-                  <Ionicons
-                    name={typeof rightIcon === 'string' ? rightIcon : 'chevron-forward-outline'}
-                    size={rightIconSize}
-                    color={rightIconColor}
-                    className=""
-                  />
-                ) : (
-                  rightIcon
-                )}
-              </>
-            )}
-          </>
-        )}
-      </Pressable>
-    </Animated.View>
-  );
-}
+    const handlePressIn = (event: any) => {
+      if (disabled || loading) return;
+      scale.value = withSpring(0.95, { damping: 10, stiffness: 300 });
+      onPressIn?.(event);
+    };
+
+    const handlePressOut = (event: any) => {
+      if (disabled || loading) return;
+      scale.value = withSpring(1, { damping: 10, stiffness: 300 });
+      onPressOut?.(event);
+    };
+
+    // Helper to render icons (string name or React Element)
+    const renderIcon = (
+      icon: IconType | undefined,
+      size: number,
+      color: string
+    ) => {
+      if (!icon) return null;
+      if (React.isValidElement(icon)) return icon;
+      return (
+        <Ionicons
+          name={icon as keyof typeof Ionicons.glyphMap}
+          size={size}
+          color={color}
+        />
+      );
+    };
+
+    return (
+      <Animated.View style={animatedStyle}>
+        <Pressable
+          ref={ref}
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          disabled={disabled || loading}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: disabled || loading, busy: loading }}
+          className={cn(
+            // Base styles
+            'flex-row items-center justify-center gap-2 rounded-xl px-4 py-3',
+            // Default styling (can be overridden by className prop)
+            'bg-blue-500 shadow-sm',
+            // Disabled state
+            (disabled || loading) && 'opacity-60',
+            className
+          )}
+          {...props}
+        >
+          {loading ? (
+            <ActivityIndicator
+              size="small"
+              color={textClassName?.includes('text-') ? undefined : 'white'}
+            />
+          ) : (
+            <>
+              {children ? (
+                children
+              ) : (
+                <>
+                  {renderIcon(leftIcon, leftIconSize, leftIconColor)}
+
+                  {title && (
+                    <Text
+                      className={cn(
+                        'text-base font-semibold text-white',
+                        textClassName
+                      )}
+                    >
+                      {title}
+                    </Text>
+                  )}
+
+                  {renderIcon(rightIcon, rightIconSize, rightIconColor)}
+                </>
+              )}
+            </>
+          )}
+        </Pressable>
+      </Animated.View>
+    );
+  }
+);
+
+Button.displayName = 'Button';

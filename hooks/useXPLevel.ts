@@ -3,6 +3,7 @@ import { useAtom } from 'jotai';
 import { homeStatsAtom, UserHomeStats } from 'store/home';
 import { fetchUserStats, clearLevelUpFlag } from '../actions/user';
 import { SheetManager } from 'react-native-actions-sheet';
+import { proStatusAtom } from 'store/pro';
 
 export interface UseXPLevelReturn {
   stats: UserHomeStats | null;
@@ -17,6 +18,8 @@ export interface UseXPLevelReturn {
  */
 export function useXPLevel(): UseXPLevelReturn {
   const [stats, setStats] = useAtom(homeStatsAtom);
+  const [, setProStatus] = useAtom(proStatusAtom);
+
   const [loading, setLoading] = useState(false);
 
   /**
@@ -40,6 +43,13 @@ export function useXPLevel(): UseXPLevelReturn {
       }
 
       setStats(newStats);
+      setProStatus({
+        isPro: newStats.isPro,
+        isProActive: newStats.isPro,
+        proExpiresAt: newStats.proExpiresAt ? new Date(newStats.proExpiresAt) : null,
+        proActivatedAt: newStats.proActivatedAt ? new Date(newStats.proActivatedAt) : null,
+        hasProAccess: newStats.isPro,
+      });
     } catch (error) {
       console.error('Error refreshing stats:', error);
     } finally {
@@ -123,11 +133,11 @@ export function useXPEarningActivity() {
  */
 export function formatXPDisplay(xp: number): string {
   if (xp >= 1000000) {
-    return `${(xp / 1000000).toFixed(1)}M XP`;
+    return `${(xp / 1000000).toFixed(1)}M`;
   } else if (xp >= 1000) {
-    return `${(xp / 1000).toFixed(1)}K XP`;
+    return `${(xp / 1000).toFixed(1)}K`;
   }
-  return `${xp.toLocaleString()} XP`;
+  return xp.toLocaleString();
 }
 
 /**

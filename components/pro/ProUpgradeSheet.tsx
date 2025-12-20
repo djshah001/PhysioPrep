@@ -1,97 +1,273 @@
 import React, { forwardRef, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity} from 'react-native';
 import ActionSheet, { ActionSheetRef, registerSheet, ScrollView } from 'react-native-actions-sheet';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useAtom } from 'jotai';
-import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
+import Animated, { 
+  Easing,
+  FadeInDown, 
+  FadeInUp, 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withDelay, 
+  withRepeat, 
+  withSequence, 
+  withTiming
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 
+// Store & Actions
 import {
-  proFeaturesAtom,
-  proFeaturesLoadingAtom,
-  PRO_BENEFITS,
   proStatusAtom,
   paymentProcessingAtom,
 } from '../../store/pro';
-import { getProFeatures } from '../../actions/pro';
 import { usePaymentProcessing } from '../../services/payment';
-import ProButton from '../ui/ProButton';
 import { userAtom } from 'store/auth';
+import ProButton from '../ui/ProButton';
+
+// --- Constants & Data ---
+
+const PRO_BENEFITS_LIST = [
+  { 
+    icon: 'infinity', 
+    title: 'Unlimited Quizzes', 
+    desc: 'Practice without limits.' 
+  },
+  { 
+    icon: 'robot-outline', 
+    title: 'AI Explanations', 
+    desc: 'Deep dive into every answer.' 
+  },
+  { 
+    icon: 'chart-line', 
+    title: 'Advanced Stats', 
+    desc: 'Track mastery & weak points.' 
+  },
+  { 
+    icon: 'shield-check-outline', 
+    title: 'Ad-Free Experience', 
+    desc: 'Zero distractions.' 
+  },
+];
+
+const COMPARISON_DATA = [
+  { feature: 'Daily Questions', free: '5', pro: 'Unlimited' },
+  { feature: 'Detailed Explanations', free: 'Basic', pro: 'In-Depth' },
+  { feature: 'Performance History', free: '7 Days', pro: 'Lifetime' },
+  { feature: 'Ads', free: 'Yes', pro: 'None' },
+];
 
 interface ProUpgradeSheetProps {
   title?: string;
-  subtitle?: string;
-  showComparison?: boolean;
 }
 
+// --- Sub-Components ---
+
+const BenefitCard = ({ item, index }: { item: typeof PRO_BENEFITS_LIST[0]; index: number }) => (
+  <Animated.View 
+    entering={FadeInDown.delay(index * 100).springify()}
+    className="w-[48%] mb-3 bg-white/5 rounded-2xl p-4 border border-white/10"
+  >
+    <View className="h-10 w-10 rounded-full bg-amber-500/20 items-center justify-center mb-3">
+      <MaterialCommunityIcons name={item.icon as any} size={20} color="#FBBF24" />
+    </View>
+    <Text className="text-white font-bold text-sm mb-1">{item.title}</Text>
+    <Text className="text-gray-400 text-xs leading-4">{item.desc}</Text>
+  </Animated.View>
+);
+
+const ComparisonRow = ({ item, index }: { item: typeof COMPARISON_DATA[0]; index: number }) => (
+  <View className={`flex-row py-3 px-4 ${index % 2 === 0 ? 'bg-white/5' : 'bg-transparent'}`}>
+    <Text className="flex-1 text-gray-300 text-sm font-medium">{item.feature}</Text>
+    <Text className="w-20 text-center text-gray-500 text-sm">{item.free}</Text>
+    <Text className="w-20 text-center text-amber-400 font-bold text-sm">{item.pro}</Text>
+  </View>
+);
+
+// --- Small Sparkle Component ---
+const Sparkle = ({ delay, style }: { delay: number; style: any }) => {
+  const scale = useSharedValue(0);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withDelay(delay, withSequence(
+      withTiming(1, { duration: 400 }),
+      withTiming(0, { duration: 400 })
+    ));
+    opacity.value = withDelay(delay, withSequence(
+      withTiming(1, { duration: 400 }),
+      withTiming(0, { duration: 400 })
+    ));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View style={[style, animatedStyle]}>
+      <MaterialCommunityIcons name="star-four-points" size={24} color="#FBBF24" />
+    </Animated.View>
+  );
+};
+
+// --- Main Success View ---
+export const SuccessView = ({ onClose }: { onClose: () => void }) => {
+  // Animation Values
+  const glowRotation = useSharedValue(0);
+  const iconScale = useSharedValue(0);
+
+  useEffect(() => {
+    // 1. Rotating Glow
+    glowRotation.value = withRepeat(
+      withTiming(360, { duration: 8000, easing: Easing.linear }),
+      -1,
+      false
+    );
+
+    // 2. Icon Pop
+    iconScale.value = withSequence(
+      withTiming(1.2, { duration: 400, easing: Easing.out(Easing.back(1.5)) }),
+      withTiming(1, { duration: 200 })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const glowStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${glowRotation.value}deg` }],
+  }));
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale.value }],
+  }));
+
+  return (
+    <View className="items-center justify-center py-12 px-6">
+      
+      {/* --- Icon Section --- */}
+      <View className="relative items-center justify-center mb-8">
+        
+        {/* Sparkles (Decorative) */}
+        <Sparkle delay={100} style={{ position: 'absolute', top: -20, left: -20 }} />
+        <Sparkle delay={300} style={{ position: 'absolute', top: 10, right: -30 }} />
+        <Sparkle delay={500} style={{ position: 'absolute', bottom: -20, left: 10 }} />
+
+        {/* Rotating Glow Background */}
+        <Animated.View style={[glowStyle, { position: 'absolute' }]}>
+          <LinearGradient
+            colors={['rgba(34, 197, 94, 0)', 'rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0)']}
+            className="h-44 w-44"
+            style={{ borderRadius: 200, overflow: 'hidden' }}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        </Animated.View>
+
+        {/* Main Icon Circle */}
+        <Animated.View style={iconStyle}>
+          <LinearGradient
+            colors={['#22C55E', '#15803d']} // Green-500 to Green-700
+            className="h-28 w-28 rounded-full items-center justify-center shadow-2xl shadow-green-500/50 border-4 border-[#0F172A] overflow-hidden"
+          >
+            <Ionicons name="checkmark" size={56} color="white" style={{ fontWeight: '900' }} />
+            
+            {/* Crown Badge Overlay */}
+          </LinearGradient>
+            <View className="absolute -top-2 -right-2 bg-amber-400 rounded-full p-1.5 border-2 border-[#0F172A]">
+              <MaterialCommunityIcons name="crown" size={20} color="#78350F" />
+            </View>
+        </Animated.View>
+      </View>
+
+      {/* --- Text Content --- */}
+      <Animated.View entering={FadeInDown.delay(300).springify()} className="items-center w-full">
+        <Text className="text-4xl font-black text-white text-center mb-2 ">
+          Welcome to <Text className="text-amber-400">Pro</Text>
+        </Text>
+        <Text className="text-gray-400 text-center text-base mb-8 leading-6 px-4">
+          You&apos;re now part of the PhysioPrep Pro family. You&apos;ve successfully unlocked unlimited quizzes, AI insights, and advanced stats.
+        </Text>
+      </Animated.View>
+
+      {/* --- Features Recap (Optional mini-list) --- */}
+      <Animated.View 
+        entering={FadeInDown.delay(500).springify()} 
+        className="flex-row gap-4 mb-10"
+      >
+        <View className="items-center">
+          <View className="bg-gray-800/50 p-3 rounded-2xl mb-2">
+            <MaterialCommunityIcons name="infinity" size={24} color="#22C55E" />
+          </View>
+          <Text className="text-gray-500 text-[10px] font-bold uppercase">Unlimited</Text>
+        </View>
+        <View className="items-center">
+          <View className="bg-gray-800/50 p-3 rounded-2xl mb-2">
+            <MaterialCommunityIcons name="robot" size={24} color="#3B82F6" />
+          </View>
+          <Text className="text-gray-500 text-[10px] font-bold uppercase">AI Helper</Text>
+        </View>
+        <View className="items-center">
+          <View className="bg-gray-800/50 p-3 rounded-2xl mb-2">
+            <MaterialCommunityIcons name="chart-bar" size={24} color="#F59E0B" />
+          </View>
+          <Text className="text-gray-500 text-[10px] font-bold uppercase">Analytics</Text>
+        </View>
+      </Animated.View>
+
+      {/* --- CTA Button --- */}
+      <Animated.View entering={FadeInDown.delay(700).springify()} className="w-full">
+        <ProButton
+          size="large"
+          text="Start Learning"
+          onPress={onClose}
+          variant="indigo"
+        />
+      </Animated.View>
+
+    </View>
+  );
+};
+
+
+
+// --- Main Component ---
+
 const ProUpgradeSheet = forwardRef<ActionSheetRef, ProUpgradeSheetProps>(
-  (
-    {
-      title = 'Upgrade to Pro',
-      subtitle = 'Unlock premium features and enhance your learning experience',
-      showComparison = true,
-    },
-    ref
-  ) => {
-    const [proFeatures, setProFeatures] = useAtom(proFeaturesAtom);
-    const [loading, setLoading] = useAtom(proFeaturesLoadingAtom);
-    const [user, setUser] = useAtom(userAtom);
-    const [proStatus, setProStatus] = useAtom(proStatusAtom);
-    const [paymentLoading, setPaymentLoading] = useAtom(paymentProcessingAtom);
-    const [paymentSuccess, setPaymentSuccess] = useState(false);
-    const [paymentError, setPaymentError] = useState<string | null>(null);
+  ({ title = 'Unlock Pro' }, ref) => {
     const insets = useSafeAreaInsets();
-
+    
+    // Atoms
+    const [user, setUser] = useAtom(userAtom);
+    const [, setProStatus] = useAtom(proStatusAtom);
+    const [paymentLoading, setPaymentLoading] = useAtom(paymentProcessingAtom);
+    
+    // Local State
+    const [paymentSuccess, setPaymentSuccess] = useState(false);
+    
     const { processPayment } = usePaymentProcessing();
-
-    // Load pro features when sheet opens
-    useEffect(() => {
-      const loadFeatures = async () => {
-        if (proFeatures.length === 0) {
-          try {
-            setLoading(true);
-            const features = await getProFeatures();
-            // console.log('Features:', JSON.stringify(features, null, 2));
-            setProFeatures(features);
-          } catch (error) {
-            console.error('Failed to load pro features:', error);
-          } finally {
-            setLoading(false);
-          }
-        }
-      };
-
-      loadFeatures();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     const handleUpgrade = async () => {
       try {
         setPaymentLoading(true);
-
-        // Process payment with Stripe
+        
+        // Simulate payment or call actual Stripe
         const result = await processPayment();
 
         if (result.success) {
-          setPaymentSuccess(true);
-
-          // Immediately update Pro status atoms for instant feature unlock
           const now = new Date();
-          const updatedProStatus = {
+          
+          // Update Global State
+          setProStatus({
             isPro: true,
             isProActive: true,
-            proExpiresAt: null, // Lifetime Pro access
-            proActivatedAt: now,
             hasProAccess: true,
-            isPremium: true, // Legacy support
-            isPremiumActive: true,
-            premiumExpiry: null,
-          };
+            proActivatedAt: now,
+            proExpiresAt: null
+          });
 
-          // Update Pro status atom (this will automatically update computed atoms)
-          setProStatus(updatedProStatus);
-
-          // Update user atom with Pro status
           if (user) {
             setUser({
               ...user,
@@ -99,36 +275,16 @@ const ProUpgradeSheet = forwardRef<ActionSheetRef, ProUpgradeSheetProps>(
               isProActive: true,
               hasProAccess: true,
               proActivatedAt: now.toISOString(),
-              proExpiresAt: null,
             });
           }
 
-          // Show success message
-          // Alert.alert(
-          //   '🎉 Welcome to Pro!',
-          //   'Your Pro subscription has been activated successfully! You now have access to all premium features.',
-          //   [
-          //     {
-          //       text: 'Awesome!',
-          //       onPress: () => {
-          //         setPaymentSuccess(false);
-          //         handleClose();
-          //       },
-          //     },
-          //   ]
-          // );
+          // Trigger Success View
+          setPaymentSuccess(true);
         } else {
-          // Show error message
-          setPaymentError(
-            result.error || 'Something went wrong with your payment. Please try again.'
-          );
+          // Handle error (alert handled in hook or add local state for error text)
         }
       } catch (error) {
-        console.error('Payment error:', error);
-        setPaymentError('An unexpected error occurred. Please try again later.');
-        Alert.alert('Payment Error', 'An unexpected error occurred. Please try again later.', [
-          { text: 'OK' },
-        ]);
+        console.error(error);
       } finally {
         setPaymentLoading(false);
       }
@@ -136,187 +292,106 @@ const ProUpgradeSheet = forwardRef<ActionSheetRef, ProUpgradeSheetProps>(
 
     const handleClose = () => {
       if (ref && 'current' in ref && ref.current) {
-        setPaymentSuccess(false);
-        setPaymentError(null);
         ref.current.hide();
+        // Reset state after a delay to ensure animation finishes
+        setTimeout(() => setPaymentSuccess(false), 500);
       }
     };
 
     return (
       <ActionSheet
         ref={ref}
-        snapPoints={[50, 90]}
-        // gestureEnabled
-        // backgroundInteractionEnabled={false}
-        initialSnapIndex={1}
+        snapPoints={[95]}
+        initialSnapIndex={0}
         containerStyle={{
-          backgroundColor: '#0F0F0F',
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          padding: 20,
-          shadowColor: '#000',
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
+          backgroundColor: '#0F172A', // Slate-900
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
         }}
-        indicatorStyle={{
-          backgroundColor: '#1F2937',
-          width: 40,
-        }}
-        safeAreaInsets={insets}
-        elevation={5}>
-        {/* <View className=" px-6 pb-6"> */}
-        {/* Header */}
-        <Animated.View entering={FadeInUp.delay(100)} className="mb-6 items-center">
-          <View className="mb-4 w-full flex-row items-center justify-between">
-            <View className="w-8" />
-            <View className="flex-row items-center space-x-2">
-              <MaterialCommunityIcons name="crown" size={24} color="#FFD700" />
-              <Text className="text-xl font-bold text-white">{title}</Text>
-            </View>
-            <TouchableOpacity onPress={handleClose} className="p-2">
-              <MaterialCommunityIcons name="close" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
-          <Text className="text-center text-sm text-gray-400">{subtitle}</Text>
-        </Animated.View>
-
-        <ScrollView showsVerticalScrollIndicator={false} className="">
-          {/* Pro Benefits */}
-          <Animated.View entering={FadeInDown.delay(200)} className="mb-6 ">
-            <Text className="mb-4 text-lg font-bold text-white">Pro Benefits</Text>
-            <View className="flex-1 gap-2 space-y-3">
-              {PRO_BENEFITS.map((benefit, index) => (
-                <Animated.View
-                  key={benefit.title}
-                  entering={FadeInDown.delay(300 + index * 100)}
-                  className={`flex-row items-center rounded-xl p-4 ${
-                    benefit.highlight
-                      ? 'border border-yellow-500/20 bg-yellow-500/10'
-                      : 'bg-gray-800/50'
-                  }`}>
-                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-gray-700">
-                    <Text className="text-lg">{benefit.icon}</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="font-semibold text-white">{benefit.title}</Text>
-                    <Text className="text-sm text-gray-400">{benefit.description}</Text>
-                  </View>
-                  {benefit.highlight && (
-                    <View className="rounded-full bg-yellow-500 px-2 py-1">
-                      <Text className="text-xs font-bold text-black">Popular</Text>
-                    </View>
-                  )}
-                </Animated.View>
-              ))}
-            </View>
-          </Animated.View>
-
-          {/* Comparison Table */}
-          {showComparison && (
-            <Animated.View entering={FadeInDown.delay(600)} className="mb-6">
-              <Text className="mb-4 text-lg font-bold text-white">Free vs Pro</Text>
-              <View className="overflow-hidden rounded-xl border border-gray-700 bg-gray-800/50">
-                {/* Table Header */}
-                <View className="flex-row bg-gray-700/50">
-                  <View className="flex-1 border-r border-gray-700 p-4">
-                    <Text className="font-semibold text-white">Feature</Text>
-                  </View>
-                  <View className="w-24 items-center justify-center border-r border-gray-700 p-3">
-                    <Text className="text-center font-semibold text-gray-400">Free</Text>
-                  </View>
-                  <View className="w-24 items-center justify-center p-3">
-                    <Text className="text-center font-semibold text-yellow-400">Pro</Text>
-                  </View>
-                </View>
-                {/* Table Rows */}
-                {[
-                  { feature: 'Quiz Attempts', free: '5/day', pro: 'Unlimited' },
-                  { feature: 'Advertisements', free: 'Yes', pro: 'None' },
-                  { feature: 'Comprehensive Tests', free: 'No', pro: 'Yes' },
-                  { feature: 'Priority Support', free: 'No', pro: 'Yes' },
-                  { feature: 'Advanced Analytics', free: 'Basic', pro: 'Detailed' },
-                  { feature: 'Offline Access', free: 'No', pro: 'Yes' },
-                ].map((row, index) => (
-                  <View
-                    key={row.feature}
-                    className={`flex-row items-center ${index % 2 === 0 ? 'bg-gray-800/30' : 'bg-gray-800/10'}`}>
-                    <View className="flex-1 border-r border-gray-700 p-3">
-                      <Text className="text-white "> {row.feature}</Text>
-                    </View>
-                    <View className="w-24 items-center justify-center border-r border-gray-700 p-3">
-                      <Text className="text-center text-sm text-gray-400" numberOfLines={1}>
-                        {row.free}
-                      </Text>
-                    </View>
-                    <View className="w-24 items-center justify-center p-3">
-                      <Text className="text-center text-sm font-semibold text-yellow-400">
-                        {row.pro}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </Animated.View>
-          )}
-        </ScrollView>
-
-        {/* Upgrade Button */}
-        <Animated.View entering={FadeInUp.delay(800)} className="mt-4">
+        indicatorStyle={{ backgroundColor: '#334155', width: 40, marginTop: 10 }}
+        gestureEnabled={!paymentSuccess}
+      >
+        <View 
+          style={{ 
+            paddingBottom: insets.bottom + 20, 
+            height: '100%' 
+          }}
+        >
           {paymentSuccess ? (
-            <Animated.View entering={ZoomIn} className="items-center py-4">
-              <View className="mb-3 h-16 w-16 items-center justify-center rounded-full bg-green-500">
-                <Ionicons name="checkmark" size={32} color="white" />
-              </View>
-              <Text className="text-lg font-bold text-green-400">Payment Successful!</Text>
-              <Text className="text-sm text-neutral-400">Welcome to Pro ✨</Text>
-            </Animated.View>
-          ) : paymentError ? (
-            <Animated.View entering={ZoomIn} className="items-center py-4">
-              <View className="mb-3 h-16 w-16 items-center justify-center rounded-full bg-red-500">
-                <Ionicons name="close" size={32} color="white" />
-              </View>
-              <Text className="text-lg font-bold text-red-400">Payment Failed</Text>
-              <Text className="text-sm text-neutral-400 mb-2">{paymentError}</Text>
-              <ProButton
-                text="Try Again"
-                onPress={handleUpgrade}
-                // className="mt-4"
-                disabled={paymentLoading}
-                variant='secondary'
-              />
-            </Animated.View>
+            <SuccessView onClose={handleClose} />
           ) : (
             <>
-              <ProButton
-                size="large"
-                text={paymentLoading ? 'Processing...' : 'Upgrade to Pro - $50'}
-                onPress={handleUpgrade}
-                disabled={paymentLoading}
-              />
-              {paymentLoading && (
-                <View className="mt-3 flex-row items-center justify-center">
-                  <ActivityIndicator size="small" color="#FFD700" />
-                  <Text className="ml-2 text-sm text-neutral-400">
-                    Secure payment processing...
-                  </Text>
+              {/* Header */}
+              <View className="px-6 pt-4 pb-2 flex-row justify-between items-center">
+                <View>
+                  <Text className="text-amber-400 font-bold text-xs uppercase tracking-widest mb-1">Premium Access</Text>
+                  <Text className="text-2xl font-black text-white">Get {title}</Text>
                 </View>
-              )}
-              <Text className="mt-2 text-center text-xs text-neutral-500">
-                One-time payment • Secure with Stripe
-              </Text>
+                <TouchableOpacity 
+                  onPress={handleClose} 
+                  className="bg-white/10 p-2 rounded-full"
+                >
+                  <Ionicons name="close" size={20} color="white" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView 
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 20 }}
+              >
+                
+                {/* Hero Gradient Text */}
+                <Text className="text-gray-400 text-sm mb-6 leading-5">
+                  Supercharge your learning with unlimited access to advanced tools and analytics.
+                </Text>
+
+                {/* Benefits Grid */}
+                <View className="flex-row flex-wrap justify-between mb-6">
+                  {PRO_BENEFITS_LIST.map((item, index) => (
+                    <BenefitCard key={index} item={item} index={index} />
+                  ))}
+                </View>
+
+                {/* Comparison Table */}
+                <Animated.View entering={FadeInUp.delay(400).springify()} className="mb-8">
+                  <Text className="text-white font-bold text-lg mb-3">Plan Comparison</Text>
+                  <View className="rounded-2xl border border-gray-700 overflow-hidden bg-gray-900/50">
+                    <View className="flex-row bg-gray-800 py-3 px-4">
+                      <Text className="flex-1 text-gray-400 text-xs uppercase font-bold">Feature</Text>
+                      <Text className="w-20 text-center text-gray-400 text-xs uppercase font-bold">Free</Text>
+                      <Text className="w-20 text-center text-amber-400 text-xs uppercase font-bold">Pro</Text>
+                    </View>
+                    {COMPARISON_DATA.map((item, index) => (
+                      <ComparisonRow key={index} item={item} index={index} />
+                    ))}
+                  </View>
+                </Animated.View>
+
+              </ScrollView>
+
+              {/* Sticky Footer */}
+              <View className="px-6 py-4 border-t border-white/5 bg-[#0F172A]">
+                <ProButton 
+                  text={paymentLoading ? 'Processing...' : 'Upgrade Now • $49.99'}
+                  subtext="One-time payment. Lifetime access."
+                  variant="gold"
+                  size="large"
+                  onPress={handleUpgrade}
+                  disabled={paymentLoading}
+                />
+                <Text className="text-center text-gray-500 text-[10px] mt-3">
+                  Secured by Stripe. Restore purchase available in settings.
+                </Text>
+              </View>
             </>
           )}
-        </Animated.View>
-
-        <View className="h-16" />
-        {/* </View> */}
+        </View>
       </ActionSheet>
     );
   }
 );
 
 ProUpgradeSheet.displayName = 'ProUpgradeSheet';
-
 registerSheet('pro-upgrade-sheet', ProUpgradeSheet);
 
 export default ProUpgradeSheet;

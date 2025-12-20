@@ -1,207 +1,207 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { View, ScrollView, Text, RefreshControl } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useAuth } from '~/useAuth';
-import { Colors } from 'constants/Colors';
-import { CustomHeader } from 'components/common/CustomHeader';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAtom, useSetAtom } from 'jotai';
-import { TopicCard } from 'components/ui/TopicCard'; // NEW: create this component
-import { Button } from 'components/ui/button';
-import { fetchSubjectAtom, loadingAtom, subjectAtom } from 'store/subject';
-import { SubjectDetailSkeleton } from 'components/skeletons/SubjectDetailSkeleton';
 import colors from 'tailwindcss/colors';
-import { ProgressBar } from '~/ProgressBar';
+
+// Hooks & Store
+import { useProAccess } from '~/useProAccess';
+import { fetchSubjectAtom, loadingAtom, subjectAtom } from 'store/subject';
 import {
   rewardedAdLoadedAtom,
   initializeRewardedAdAtom,
   loadRewardedAdAtom,
   showRewardedAdAtom,
 } from 'store/rewardedAd';
-import Chip from '~/ui/Chip';
-import { useProAccess } from '../../../hooks/useProAccess';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+// Components
+import { CustomHeader } from 'components/common/CustomHeader';
+import { TopicCard } from 'components/ui/TopicCard';
+import { SubjectDetailSkeleton } from 'components/skeletons/SubjectDetailSkeleton';
+import { Button } from 'components/ui/button';
+import { Colors } from 'constants/Colors';
+import { ProgressBar } from '~/ProgressBar';
+
+// --- Helper Component for Hero Stats ---
+const StatBadge = ({
+  icon,
+  value,
+  label,
+}: {
+  icon: any;
+  value: string | number;
+  label: string;
+}) => (
+  <View className="mx-1 flex-1 items-center rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur-md">
+    <MaterialCommunityIcons name={icon} size={20} color="white" style={{ marginBottom: 4 }} />
+    <Text className="text-lg font-bold text-white">{value}</Text>
+    <Text className="text-[10px] font-medium uppercase tracking-wider text-white/70">{label}</Text>
+  </View>
+);
 
 export default function SubjectDetailPage() {
-  const { id } = useLocalSearchParams();
+  const { id, gradientColors } = useLocalSearchParams();
   const router = useRouter();
-  const { user } = useAuth();
   const { shouldShowAds } = useProAccess();
+
+  // State
   const [subject] = useAtom(subjectAtom);
   const [loading] = useAtom(loadingAtom);
   const fetchSubject = useSetAtom(fetchSubjectAtom);
 
-  // Use shared rewarded ad state
+  // Ads
   const [rewardedAdLoaded] = useAtom(rewardedAdLoadedAtom);
   const initializeRewardedAd = useSetAtom(initializeRewardedAdAtom);
   const loadRewardedAd = useSetAtom(loadRewardedAdAtom);
   const showRewardedAd = useSetAtom(showRewardedAdAtom);
 
+  // --- Effects ---
   useEffect(() => {
     if (id) fetchSubject(id as string, false);
   }, [id, fetchSubject]);
 
   useEffect(() => {
-    // Initialize the shared rewarded ad (only for non-Pro users)
     if (shouldShowAds()) {
-      const cleanup = initializeRewardedAd();
-      return cleanup;
+      return initializeRewardedAd();
     }
   }, [initializeRewardedAd, shouldShowAds]);
 
   useFocusEffect(() => {
-    // Load ad when screen comes into focus (only for non-Pro users)
-    if (shouldShowAds()) {
-      loadRewardedAd();
-    }
+    if (shouldShowAds()) loadRewardedAd();
   });
 
   const onRefresh = () => {
     if (id) fetchSubject(id as string, true);
   };
 
+  const handleSubjectQuiz = async () => {
+    if (shouldShowAds()) {
+      await showRewardedAd();
+    }
+    router.push(`/subjects/${subject?._id}/quiz`);
+  };
+
   if (loading || !subject) {
     return <SubjectDetailSkeleton />;
   }
 
-  const handleSubjectQuiz = async () => {
-    // Only show ad for non-Pro users
-    if (shouldShowAds()) {
-      await showRewardedAd();
-    }
-    router.push(`/subjects/${subject._id}/quiz`);
-  };
+  // --- Data Calculation ---
+  const totalQuestions = subject.stats?.totalQuestions ?? 0;
+  const correctAnswers = subject.userStats?.correctlyAnsweredQuestions ?? 0;
+  const progressPercent = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+  const roundedProgress = Math.round(progressPercent);
+  const gradient = gradientColors ? JSON.parse(gradientColors as string) as string[] : ['#3B82F6', '#2563EB'];
 
-  // console.log('subject:',JSON.stringify(subject, null, 2));
-
-  const progress =
-    (subject.userStats?.correctlyAnsweredQuestions ?? 0) / (subject.stats?.totalQuestions || 1);
-
-  // console.log(JSON.stringify(subject.topics, null, 2));
   return (
     <View className="flex-1 bg-neutral-50">
+      <CustomHeader title="Subject Details" showBack />
+
       <ScrollView
         className="flex-1"
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={Colors.primary} />
         }
-        contentContainerClassName="pb-32">
-        {/* Subject Details Card */}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}>
+        {/* --- Hero Section --- */}
+        <View className="px-4 pt-4">
+          <Animated.View entering={FadeInDown.delay(100).springify()}>
+            <LinearGradient
+              colors={gradient as any} // Indigo to Violet
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              className="relative overflow-hidden rounded-[32px] p-6 shadow-xl shadow-neutral-600">
+              {/* Decorative Circles */}
+              <View className="absolute -right-4 -top-10 h-32 w-32 rounded-full bg-white/20 blur-2xl" />
+              <View className="absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-black/5 blur-2xl" />
+              {/* <View className="absolute -right-10 -bottom-10 h-36 w-36 rounded-full bg-black/20 blur-2xl" /> */}
 
-        <CustomHeader title={subject?.name as string} showBack />
-
-        <View className="mt-3 p-4">
-          <View
-            // colors={[primaryColor as string, secondaryColor as string]}
-            className="overflow-hidden rounded-3xl bg-slate-50 p-6 shadow-lg shadow-neutral-700">
-            <View className="mb-2 flex-row items-center">
-              <View
-                // intensity={50}
-                className=" h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-neutral-200 bg-rose-500 ">
-                <Text className="text-2xl text-white">{subject.name[0]}</Text>
+              {/* Top Row: Icon & Title */}
+              <View className="mb-6 flex-row items-center">
+                <View className="h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-white/20">
+                  <Text className="text-3xl font-black text-white">{subject.name.charAt(0)}</Text>
+                </View>
+                <View className="ml-4 flex-1">
+                  <Text className="text-2xl font-bold leading-tight text-white">
+                    {subject.name}
+                  </Text>
+                  <Text className="text-sm font-medium text-indigo-100">
+                    {subject.topics?.length || 0} Topics Available
+                  </Text>
+                </View>
               </View>
-              {/* <Ionicons name={subject.icon as any} size={36} color={subject.color} className="mr-3" /> */}
-              <Text className=" ml-2 text-3xl font-extrabold text-neutral-800">{subject.name}</Text>
-            </View>
-            {/* <Text className="mb-2 text-base text-neutral-500">{subject.description}</Text> */}
-            <View className=" flex-row flex-wrap gap-2">
-              <Chip
-                iconName="book"
-                iconColor={colors.rose[600]}
-                label={`${subject.stats?.totalQuestions ?? 0} Questions`}
-              />
 
-              <Chip
-                iconName="bookmarks"
-                iconColor={colors.blue[400]}
-                label={`${subject.stats?.totalTopics ?? 0} Topics`}
-              />
-
-              {/* <Chip
-                iconName="star"
-                iconColor={colors.yellow[400]}
-                label={`${subject.stats?.freeQuestions ?? 0} Free`}
-              />
-              <Chip
-                iconName="lock-closed"
-                iconColor={colors.blue[400]}
-                label={`${subject.stats?.premiumQuestions ?? 0} Premium`}
-              /> */}
-              <Chip
-                iconName="checkmark-circle"
-                iconColor={colors.green[400]}
-                label={`${subject.userStats?.correctlyAnsweredQuestions ?? 0} Correctly Answered`}
-              />
-            </View>
-
-            <View className="mt-6 gap-2 ">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-semibold text-neutral-800">Your Progress </Text>
-                <Text className="text-lg font-semibold text-neutral-800">
-                  {Math.round(progress * 100)}%
-                </Text>
+              {/* Stats Grid */}
+              <View className="mb-6 flex-row justify-between">
+                <StatBadge icon="book-open-page-variant" value={totalQuestions} label="Questions" />
+                <StatBadge icon="check-circle-outline" value={correctAnswers} label="Solved" />
+                <StatBadge icon="chart-donut" value={`${roundedProgress}%`} label="Mastery" />
               </View>
-              <ProgressBar value={Math.round(progress * 100)} color={colors.green[400]} />
-            </View>
-            {/* Quiz/Test Buttons */}
-            {/* <View className="mt-6 flex-row gap-4 "> */}
-            <Button
-              title="Start The Quiz "
-              rightIcon="play-outline"
-              onPress={() => handleSubjectQuiz()}
-              className="mt-6 flex-1 rounded-2xl bg-lime-500 shadow-md"
-              textClassName="text-white text-lg font-bold"
-              disabled={!rewardedAdLoaded && shouldShowAds()}
-              loading={!rewardedAdLoaded && shouldShowAds()}
-            />
-            {/* <Button
-                title="Comprehensive Test"
-                rightIcon="clipboard-outline"
-                onPress={() => router.push(`/subjects/comprehensive-test`)}
-                className="flex-1 rounded-3xl bg-neutral-900 shadow-md"
-                textClassName="text-white text-lg font-bold"
-              /> */}
-            {/* </View> */}
-          </View>
+
+              {/* Progress Bar */}
+              <View className="mb-6">
+                <View className="mb-2 flex-row justify-between">
+                  <Text className="text-xs font-bold uppercase text-indigo-100">Progress</Text>
+                  <Text className="text-xs font-bold text-white">{roundedProgress}% Complete</Text>
+                </View>
+                <ProgressBar
+                  value={progressPercent}
+                  color={colors.neutral[50]}
+                  className="bg-black/20"
+                />
+              </View>
+
+              {/* CTA Button */}
+              <Button
+                title="Start The Quiz "
+                rightIcon="play-outline"
+                rightIconColor={colors.neutral[800]}
+                onPress={() => handleSubjectQuiz()}
+                className=" flex-1 rounded-2xl bg-neutral-50 shadow-md z-40"
+                textClassName="text-neutral-800 text-lg font-bold"
+                disabled={!rewardedAdLoaded && shouldShowAds()}
+                loading={!rewardedAdLoaded && shouldShowAds()}
+              />
+            </LinearGradient>
+          </Animated.View>
         </View>
 
-        {/* Topics List */}
-        <View className="px-6">
-          <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-xl font-semibold text-neutral-800">Topics Covered</Text>
-          </View>
-          <View className={`flex flex-row flex-wrap gap-3 justify-center`}>
-            {subject.topics && subject.topics.length > 0 ? (
-              subject.topics.map((topic, index) => (
+        {/* --- Topics Section --- */}
+        <View className="mt-8 px-6">
+          <Animated.View
+            entering={FadeInUp.delay(200).springify()}
+            className="mb-4 flex-row items-end justify-between">
+            <View>
+              <Text className="text-xl font-bold text-neutral-800">Topics</Text>
+              <Text className="text-sm text-neutral-400">Deep dive into specific areas</Text>
+            </View>
+          </Animated.View>
+
+          {subject.topics && subject.topics.length > 0 ? (
+            <View className="flex-row flex-wrap justify-between">
+              {subject.topics.map((topic, index) => (
                 <TopicCard
                   key={topic._id}
                   index={index}
                   topic={topic}
                   subjectId={subject._id}
-                  isAdmin={user?.role === 'admin'}
+                  // isAdmin={user?.role === 'admin'}
                   onTakeQuiz={() => router.push(`/topics/${topic._id}/quiz`)}
                   onViewDetails={() => router.push(`/topics/${topic._id}`)}
                 />
-              ))
-            ) : (
-              <View className="rounded-3xl bg-slate-50 p-6 shadow-lg shadow-neutral-700 items-center">
-                <View className="mb-4 rounded-full bg-blue-400 p-6 shadow-xl shadow-blue-400">
-                  <MaterialCommunityIcons
-                    name="book-remove-multiple-outline"
-                    size={48}
-                    color={colors.neutral[50]}
-                  />
-                </View>
-                <Text className="mb-2 text-2xl font-semibold text-neutral-800">No Topics Yet</Text>
-                <Text className="text-center text-base leading-relaxed text-neutral-500">
-                  This subject doesn&apost have any topics yet.{'\n'}
-                  Check back later for new content!
-                </Text>
-              </View>
-            )}
-          </View>
+              ))}
+            </View>
+          ) : (
+            <View className="items-center justify-center py-10 opacity-50">
+              <MaterialCommunityIcons name="bookshelf" size={48} color={colors.neutral[400]} />
+              <Text className="mt-4 font-medium text-neutral-500">No topics available yet.</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
-      {/* Floating Action Button for subject-wise quiz/test */}
     </View>
   );
 }

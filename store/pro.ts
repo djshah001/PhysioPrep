@@ -17,10 +17,6 @@ export interface ProStatus {
   proExpiresAt: Date | null;
   proActivatedAt: Date | null;
   hasProAccess: boolean;
-  // Legacy premium support
-  isPremium: boolean;
-  isPremiumActive: boolean;
-  premiumExpiry: Date | null;
 }
 
 //paymwnt process loading state

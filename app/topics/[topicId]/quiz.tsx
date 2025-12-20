@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, ActivityIndicator, useWindowDimensions, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { quizApi } from 'services/api';
 import { Button } from 'components/ui/button';
@@ -16,11 +16,11 @@ import AnswerOption from 'components/quiz/AnswerOption';
 import SubmissionModal from 'components/quiz/SubmissionModal';
 import JumpToQuestionModal from 'components/quiz/JumpToQuestionModal';
 import QuizReview from 'components/questions/QuizReview';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 // import { CustomHeader } from '~/common/CustomHeader';
 import { handleError } from 'lib/utils';
 import { ScrollView } from 'react-native-gesture-handler';
-import ActionSheet, { ActionSheetRef } from 'react-native-actions-sheet';
+import { ActionSheetRef } from 'react-native-actions-sheet';
 import RenderHTML from 'react-native-render-html';
 import { customHTMLElementModels, tagsStyles, renderers } from 'lib/HtmlRenderers';
 import {
@@ -31,6 +31,10 @@ import {
   handleSubmit,
 } from 'lib/QuizHandelers';
 import { QuizResultProps } from 'types/types';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInRight, FadeInUp } from 'react-native-reanimated';
+import colors from 'tailwindcss/colors';
+import ExplainSheet from '~/questions/ExplainSheet';
 export default function TopicQuizPage() {
   const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const router = useRouter();
@@ -125,72 +129,98 @@ export default function TopicQuizPage() {
 
   const q = quiz.questions[currentIndex];
   return (
-    <ScrollView contentContainerClassName=" bg-background p-4">
-      <QuizHeader
-        current={currentIndex}
-        total={quiz.questions.length}
-        startTime={startTimeRef.current}
-        elapsed={elapsed}
-      />
-      <View className="mb-4 rounded-2xl bg-white p-6 shadow">
-        <Text className="mb-2 text-lg font-bold text-primary">
-          Question {currentIndex + 1} / {quiz.questions.length}
-        </Text>
+    <SafeAreaView edges={['top']} className="flex-1 bg-slate-100">
+      {/* Sticky Header */}
+      <View className="relative z-20 border-b border-slate-200 bg-white shadow-sm">
+        <View className="flex-row items-center justify-between px-4 py-3">
+          <TouchableOpacity onPress={() => router.back()} className="p-1">
+            <Ionicons name="close" size={24} color={colors.slate[500]} />
+          </TouchableOpacity>
+          <Text className="text-lg font-bold text-slate-700">Subject Quiz</Text>
+          <View className="w-6" />
+        </View>
+        <QuizHeader
+          current={currentIndex}
+          total={quiz.questions.length}
+          startTime={startTimeRef.current}
+          elapsed={elapsed}
+          showTimer={false} // Count up timer integrated in header or hidden
+        />
+      </View>
 
-        {/* <Text className="mb-4 text-lg leading-6 text-neutral-800">{q.text}</Text> */}
-        <View className="mb-4">
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 140 }}
+        showsVerticalScrollIndicator={false}>
+        {/* Question Card */}
+        <Animated.View
+          key={currentIndex}
+          entering={FadeInRight}
+          className="mb-6 rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+          <View className="mb-4 flex-row justify-between">
+            <Text className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-indigo-500">
+              Question {currentIndex + 1}
+            </Text>
+            {/* Optional: Add difficulty or topic tag here */}
+          </View>
+
           <RenderHTML
-            contentWidth={width - 48} // Account for padding
+            contentWidth={width - 88}
             source={{ html: q.textHtml as string }}
             customHTMLElementModels={customHTMLElementModels}
             renderers={renderers}
-            tagsStyles={tagsStyles}
-            systemFonts={['System']}
-            enableExperimentalMarginCollapsing
-            defaultTextProps={{ selectable: false }}
-            renderersProps={{
-              img: { enableExperimentalPercentWidth: true }
+            tagsStyles={{
+              ...tagsStyles,
+              p: { fontSize: 18, lineHeight: 28, color: '#1e293b', marginBottom: 10 },
             }}
+            defaultTextProps={{ selectable: false }}
           />
+        </Animated.View>
+
+        {/* Answer Options */}
+        <View className="gap-3">
+          {q.options.map((opt: any, idx: number) => (
+            <Animated.View key={`${currentIndex}-${idx}`} entering={FadeInUp.delay(idx * 50)}>
+              <AnswerOption
+                text={opt.text}
+                selected={answers[currentIndex]?.selectedAnswer === idx}
+                onPress={() =>
+                  handleSelect(
+                    idx,
+                    answers,
+                    currentIndex,
+                    setAnswers,
+                    explainRef as React.RefObject<ActionSheetRef>,
+                    quiz
+                  )
+                }
+                disabled={submitting || answers[currentIndex] != null}
+                correctAnswer={answers[currentIndex] != null ? opt.isCorrect : undefined}
+              />
+            </Animated.View>
+          ))}
         </View>
-        {q.options.map((opt, idx) => (
-          <AnswerOption
-            key={idx}
-            text={opt.text}
-            selected={answers[currentIndex]?.selectedAnswer === idx}
-            correctAnswer={opt.isCorrect}
-            onPress={() =>
-              handleSelect(
-                idx,
-                answers,
-                currentIndex,
-                setAnswers,
-                explainRef as React.RefObject<ActionSheetRef>,
-                quiz
-              )
-            }
-            disabled={submitting || answers[currentIndex] != null}
-          />
-        ))}
-      </View>
-      <View className="mt-6 flex-row items-center justify-between">
-        <Button
-          title="Previous"
+      </ScrollView>
+
+      {/* Bottom Navigation Bar */}
+      <View className="absolute bottom-0 w-full flex-row items-center justify-between border-t border-slate-200 bg-white px-6 pb-8 pt-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        {/* Previous */}
+        <TouchableOpacity
           onPress={() => handlePrev(currentIndex, setCurrentIndex, quiz)}
           disabled={currentIndex === 0 || submitting}
-        />
-        <Button
-          title="Explain"
-          onPress={() => explainRef.current?.show()}
-          disabled={answers[currentIndex] == null}
-          className="mx-2 py-2"
-        />
-        <Button
-          title="Jump"
+          className={`rounded-full border border-slate-200 bg-slate-100 p-3 ${currentIndex === 0 ? 'opacity-50' : ''}`}>
+          <Ionicons name="chevron-back" size={24} color={colors.slate[600]} />
+        </TouchableOpacity>
+
+        {/* Overview / Jump */}
+        <TouchableOpacity
           onPress={() => setShowJumpModal(true)}
           disabled={submitting}
-          className="mx-2 py-2"
-        />
+          className="flex-row items-center rounded-2xl border border-slate-200 bg-slate-100 px-5 py-3">
+          <MaterialCommunityIcons name="view-grid-outline" size={20} color={colors.slate[600]} />
+          <Text className="ml-2 font-semibold text-slate-700">Map</Text>
+        </TouchableOpacity>
+
+        {/* Next / Submit */}
         {currentIndex === quiz.questions.length - 1 ? (
           <Button
             title={submitting ? 'Submitting...' : 'Submit'}
@@ -205,17 +235,21 @@ export default function TopicQuizPage() {
                 setShowSubmissionModal
               )
             }
+            rightIcon={'checkmark-outline'}
             disabled={submitting || answers.length < quiz.questions.length}
+            className="rounded-full bg-green-600 p-3 shadow-lg shadow-green-200"
           />
         ) : (
-          <Button
-            title="Next"
+          <TouchableOpacity
             onPress={() => handleNext(currentIndex, setCurrentIndex, quiz)}
             disabled={submitting}
-          />
+            className="rounded-full bg-indigo-600 p-3 shadow-lg shadow-indigo-200">
+            <Ionicons name="chevron-forward" size={24} color="white" />
+          </TouchableOpacity>
         )}
       </View>
 
+      {/* Modals & Sheets */}
       <JumpToQuestionModal
         visible={showJumpModal}
         currentIndex={currentIndex}
@@ -223,65 +257,21 @@ export default function TopicQuizPage() {
         onJump={(idx) => handleJumpTo(idx, setCurrentIndex, setShowJumpModal)}
         onClose={() => setShowJumpModal(false)}
         submitting={submitting}
+        // answers={answers} // Pass answers to visualize progress
       />
 
       <SubmissionModal
         visible={!!result && showSubmissionModal}
         onClose={() => {
           setShowSubmissionModal(false);
-          setShowReview(true); // Automatically show review after submission
+          setShowReview(true);
         }}
         score={result?.score || 0}
         total={result?.totalQuestions || 0}
         time={elapsed.current}
       />
 
-      <ActionSheet
-      
-        ref={explainRef}
-        snapPoints={[50, 90]}
-        gestureEnabled
-        initialSnapIndex={1}
-        containerStyle={{
-          borderRadius: 16,
-          backgroundColor: '#fff',
-          shadowColor: '#000',
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-        }}>
-        <View className="px-4 pb-2 pt-3">
-          {/* <View className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-300" /> */}
-          <View className="mb-2 flex-row items-center justify-between">
-            <Text className="text-lg font-bold text-neutral-900">Explanation</Text>
-            <Button title="Close" onPress={() => explainRef.current?.hide()} />
-          </View>
-        </View>
-        <ScrollView contentContainerClassName="px-4 pb-6">
-          <RenderHTML
-            contentWidth={Math.max(320, width - 48)}
-            source={{ html: q.explanationHtml as string }}
-            customHTMLElementModels={customHTMLElementModels}
-            tagsStyles={tagsStyles}
-            systemFonts={['System']}
-            enableExperimentalMarginCollapsing
-            defaultTextProps={{ selectable: false }}
-            renderers={renderers}
-            renderersProps={{
-              img: { enableExperimentalPercentWidth: true },
-              table: {
-                tableStyleSpecs: {
-                  outerBorderWidthPx: 1,
-                  rowsBorderWidthPx: 1,
-                  columnsBorderWidthPx: 1,
-                  borderColor: '#e5e7eb',
-                  cellPaddingEm: 0.5,
-                  linkColor: '#3b82f6',
-                },
-              },
-            }}
-          />
-        </ScrollView>
-      </ActionSheet>
-    </ScrollView>
+      <ExplainSheet ref={explainRef} title="Explanation" html={q.explanationHtml as string} />
+    </SafeAreaView>
   );
 }

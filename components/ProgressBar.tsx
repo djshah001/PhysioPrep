@@ -1,9 +1,10 @@
+import { cn } from 'lib/utils';
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 
 interface ProgressBarProps {
   value: number;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   className?: string;
   color?: string;
 }
@@ -12,12 +13,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   value,
   style,
   className,
-  color = '#007AFF',
+  color = '#6366F1',
 }) => {
   const progress = Math.min(Math.max(value, 0), 100);
 
   return (
-    <View style={[styles.container, style]} className={className}>
+    <View style={[styles.container, style]} className={cn('bg-neutral-100', className)}>
       <View
         style={[
           styles.progress,
@@ -31,7 +32,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 const styles = StyleSheet.create({
   container: {
     height: 8,
-    backgroundColor: '#E5E5EA',
     borderRadius: 4,
     overflow: 'hidden',
   },

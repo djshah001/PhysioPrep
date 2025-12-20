@@ -34,13 +34,13 @@ export default function XPLevelCard({
 }: XPLevelCardProps) {
   const progressWidth = useSharedValue(0);
 
-  console.log('XP:', xp);
-  console.log('Level:', level);
-  console.log('XP to Next Level:', xpToNextLevel);
-  console.log('XP in Current Level:', xpInCurrentLevel);
-  console.log('Level Progress Percent:', levelProgressPercent);
-  console.log('Has Leveled Up:', hasLeveledUp);
-  console.log('Current Badge:', currentBadge);
+  // console.log('XP:', xp);
+  // console.log('Level:', level);
+  // console.log('XP to Next Level:', xpToNextLevel);
+  // console.log('XP in Current Level:', xpInCurrentLevel);
+  // console.log('Level Progress Percent:', levelProgressPercent);
+  // console.log('Has Leveled Up:', hasLeveledUp);
+  // console.log('Current Badge:', currentBadge);
 
   React.useEffect(() => {
     progressWidth.value = withSpring(levelProgressPercent, {

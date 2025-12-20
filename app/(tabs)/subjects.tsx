@@ -1,15 +1,23 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, ScrollView, RefreshControl, Text, TextInput, TouchableOpacity } from 'react-native';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from 'hooks/useAuth';
 import { SubjectCard } from 'components/subject/SubjectCard';
 import { EmptySubject } from 'components/subject/EmptySubject';
-import { SubjectsScreenSkeleton } from 'components/skeletons/SubjectsScreenSkeleton';
 import { useAtom, useSetAtom } from 'jotai';
 import { subjectsAtom, loadingAtom, errorAtom, fetchSubjectsAtom } from 'store/subject';
 import colors from 'tailwindcss/colors';
+
+// --- Skeleton Component for better UX ---
+const ListSkeleton = () => (
+  <View className="px-6">
+    {[1, 2, 3, 4].map((i) => (
+      <View key={i} className="mb-5 h-[140px] w-full rounded-[24px] bg-neutral-100 animate-pulse" />
+    ))}
+  </View>
+);
 
 export default function SubjectsPage() {
   const { user } = useAuth();
@@ -19,16 +27,18 @@ export default function SubjectsPage() {
   const fetchSubjects = useSetAtom(fetchSubjectsAtom);
   const [query, setQuery] = useState('');
 
+  // Initial Fetch
   useEffect(() => {
     fetchSubjects();
   }, [fetchSubjects]);
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     fetchSubjects();
-  };
+  }, [fetchSubjects]);
 
+  // Optimized Filter
   const filteredSubjects = useMemo(() => {
-    if (!query || !subjects) return subjects;
+    if (!query || !subjects) return subjects || [];
     const q = query.toLowerCase().trim();
     return subjects.filter((s: any) => {
       const title = (s.title || s.name || '').toString().toLowerCase();
@@ -36,140 +46,124 @@ export default function SubjectsPage() {
     });
   }, [query, subjects]);
 
-  // Loading State
-  if (loading && !subjects?.length) {
-    return <SubjectsScreenSkeleton />;
-  }
+  // --- Render Components ---
 
-  // Error State
+  const renderHeader = () => (
+    <Animated.View entering={FadeInDown.duration(500).springify()} className="bg-neutral-50 px-6 pt-4 pb-2">
+      <View className="flex-row justify-between items-center mb-4">
+        <View>
+            <Text className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-1">
+                Curriculum
+            </Text>
+            <Text className="text-4xl font-black text-neutral-900 tracking-tight">
+                Subjects
+            </Text>
+        </View>
+        {/* Admin Add Button (Optional) */}
+        {user?.role === 'admin' && (
+            <TouchableOpacity className="bg-indigo-600 h-10 w-10 rounded-full items-center justify-center shadow-lg shadow-indigo-200">
+                <Ionicons name="add" size={24} color="white" />
+            </TouchableOpacity>
+        )}
+      </View>
+    </Animated.View>
+  );
+
+  const renderSearchBar = () => (
+    <View className="bg-neutral-50 px-6 pb-6 pt-2">
+      <View className="flex-row items-center bg-white border border-neutral-200 rounded-2xl px-4 py-3.5 shadow-sm shadow-neutral-100">
+        <Ionicons name="search" size={20} color={colors.neutral[400]} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search for a subject..."
+          placeholderTextColor={colors.neutral[400]}
+          className="flex-1 ml-3 text-base text-neutral-900 font-medium h-full"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {query.length > 0 && (
+          <TouchableOpacity onPress={() => setQuery('')} hitSlop={10}>
+            <Ionicons name="close-circle" size={20} color={colors.neutral[300]} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View className="px-6 py-10 items-center">
+      {!loading && (
+        <>
+            <View className="h-24 w-24 bg-neutral-100 rounded-full items-center justify-center mb-4">
+                <Ionicons name="library-outline" size={40} color={colors.neutral[400]} />
+            </View>
+            <Text className="text-lg font-bold text-neutral-800 text-center">
+                {query ? 'No matches found' : 'No subjects available'}
+            </Text>
+            <Text className="text-neutral-500 text-center mt-2 mb-6">
+                {query ? `We couldn't find "${query}".` : 'Check back later for new content.'}
+            </Text>
+            {user?.role === 'admin' && (
+                <EmptySubject type="subject" isAdmin={true} href="/subjects/add" />
+            )}
+        </>
+      )}
+    </View>
+  );
+
+  // Main Render
   if (error) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-neutral-50" edges={['top']}>
-        <View className="items-center px-6">
-          <View className="mb-6 h-20 w-20 items-center justify-center rounded-full bg-red-50">
-            <Ionicons name="cloud-offline-outline" size={40} color="#EF4444" />
-          </View>
-          <Text className="text-center text-xl font-bold text-neutral-800">
-            Unable to load subjects
-          </Text>
-          <Text className="mt-2 text-center text-neutral-500 mb-8 px-4">
-            {error || "Check your internet connection and try again."}
-          </Text>
-          <TouchableOpacity
-            onPress={onRefresh}
-            className="rounded-full bg-neutral-900 px-8 py-3 shadow-lg"
-          >
-            <Text className="font-bold text-white">Try Again</Text>
-          </TouchableOpacity>
-        </View>
+      <SafeAreaView className="flex-1 items-center justify-center bg-neutral-50">
+        <Ionicons name="cloud-offline" size={64} color={colors.red[400]} />
+        <Text className="mt-4 font-bold text-lg text-neutral-800">Something went wrong</Text>
+        <Text className="text-neutral-500 mb-6">{error}</Text>
+        <TouchableOpacity onPress={onRefresh} className="bg-neutral-900 px-6 py-3 rounded-full">
+          <Text className="text-white font-bold">Try Again</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView className="flex-1 bg-neutral-50" edges={['top']}>
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 120 }}
-        refreshControl={
-          <RefreshControl 
-            refreshing={loading} 
-            onRefresh={onRefresh} 
-            tintColor={colors.indigo[500]} 
-            colors={[colors.indigo[500]]}
-          />
-        }
+      <FlatList
+        data={filteredSubjects}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item, index }) => (
+          <View className="px-6">
+             <SubjectCard subject={item} index={index} />
+          </View>
+        )}
+        
+        // Header Composition
+        ListHeaderComponent={() => (
+            <>
+                {renderHeader()}
+                {renderSearchBar()}
+            </>
+        )}
+        stickyHeaderIndices={[0]} // Makes the header sticky! Ensure the index matches the component order if separating.
+        // Actually, to make ONLY search bar sticky, we need to restructure.
+        // For simplicity with this design, let's keep it fluid or use a different sticky strategy. 
+        // NOTE: Sticky headers in FlatList refer to the index of the DATA.
+        // To make a custom component sticky, we usually put it OUTSIDE the list or use `stickyHeaderIndices` on a SectionList.
+        // Here, we will just let it scroll naturally for a cleaner "Magazine" feel.
+
+        ListEmptyComponent={loading ? <ListSkeleton /> : renderEmptyState}
+        
+        contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
-      >
-        {/* Header Section */}
-        <Animated.View entering={FadeInDown.duration(600).springify()} className="px-6 pt-6 pb-4">
-          <View className="flex-row justify-between items-start mb-2">
-            <View>
-              <Text className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">
-                Library
-              </Text>
-              <Text className="text-4xl font-black text-neutral-900 tracking-tight">
-                Subjects
-              </Text>
-            </View>
-            <TouchableOpacity 
-              onPress={onRefresh}
-              className="p-2 bg-white rounded-full shadow-sm border border-neutral-100"
-            >
-              <Ionicons name="reload" size={20} color="#374151" />
-            </TouchableOpacity>
-          </View>
-          <Text className="text-base text-neutral-500 leading-6 max-w-[90%]">
-            Select a subject to start practicing questions and quizzes.
-          </Text>
-        </Animated.View>
-
-        {/* Search Bar */}
-        <Animated.View 
-          entering={FadeInDown.delay(100).duration(600).springify()} 
-          className="px-6 pb-6 pt-2"
-        >
-          <View className="flex-row items-center rounded-[20px] bg-white px-5 py-4 shadow-sm border border-neutral-200/80">
-            <Ionicons name="search" size={22} color="#9CA3AF" />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search topics..."
-              placeholderTextColor="#9CA3AF"
-              className="flex-1 ml-3 text-base text-neutral-900 font-medium"
-              autoCapitalize="none"
-              clearButtonMode="while-editing"
-            />
-            {query.length > 0 && (
-              <TouchableOpacity onPress={() => setQuery('')} hitSlop={10}>
-                <Ionicons name="close-circle" size={20} color="#D1D5DB" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </Animated.View>
-
-        {/* Subjects Grid */}
-        <View className="px-6">
-          {!subjects || subjects.length === 0 ? (
-            <Animated.View entering={FadeInUp.delay(200).springify()}>
-                <EmptySubject type="subject" isAdmin={user?.role === 'admin'} href="/subjects/add" />
-            </Animated.View>
-          ) : filteredSubjects && filteredSubjects.length > 0 ? (
-            <View className="flex-row flex-wrap justify-between">
-              {filteredSubjects.map((subject, index) => (
-                <Animated.View 
-                  key={subject._id} 
-                  // entering={FadeInUp.delay(index * 100).springify().damping(14)}
-                  // layout={Layout.springify()}
-                  className="w-[48%] mb-5" // 48% width allows 2 columns with a ~4% gap
-                >
-                  <SubjectCard 
-                    subject={subject} 
-                    index={index} 
-                    isAdmin={user?.role === 'admin'} 
-                  />
-                </Animated.View>
-              ))}
-            </View>
-          ) : (
-            <Animated.View entering={FadeInUp.springify()} className="items-center py-24 px-10">
-              <View className="h-24 w-24 rounded-full bg-neutral-100 items-center justify-center mb-6 border border-neutral-200">
-                <Ionicons name="search-outline" size={40} color="#9CA3AF" />
-              </View>
-              <Text className="text-xl font-bold text-neutral-800 text-center">No matches found</Text>
-              <Text className="text-neutral-500 text-center mt-2 leading-6">
-                We couldn&#39;t find any subjects matching &quot;<Text className="font-semibold text-neutral-800">{query}</Text>&quot;.
-              </Text>
-              <TouchableOpacity 
-                onPress={() => setQuery('')}
-                className="mt-8"
-              >
-                <Text className="text-indigo-600 font-bold">Clear Search</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          )}
-        </View>
-      </ScrollView>
+        refreshing={loading}
+        onRefresh={onRefresh}
+        
+        // Performance Props
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        windowSize={5}
+        removeClippedSubviews={true}
+      />
     </SafeAreaView>
   );
 }

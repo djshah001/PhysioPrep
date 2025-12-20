@@ -35,6 +35,11 @@ export type UserHomeStats = {
   level: number;
   currentBadge: BadgeDetails; // { name: "Master", icon: "💎", ... }
 
+  // Pro Subscription Data
+  isPro: boolean;
+  proExpiresAt: string | null;
+  proActivatedAt: string | null;
+
   // Progress Bar Data
   xpToNextLevel: number; // e.g., 500
   xpInCurrentLevel: number; // e.g., 250
