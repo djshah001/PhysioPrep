@@ -1,192 +1,214 @@
-import { useStripe } from '@stripe/stripe-react-native';
-import api from './api';
+import RazorpayCheckout from 'react-native-razorpay';
 import { useAtom } from 'jotai';
 import { userAtom } from 'store/auth';
 import { proStatusAtom } from 'store/pro';
+import api from './api';
 
-export interface PaymentIntentResponse {
-  clientSecret: string;
-  paymentIntentId: string;
-  amount: number;
-  currency: string;
-}
-
-export interface PaymentConfirmationResponse {
-  message: string;
-  user: {
-    id: string;
-    isPro: boolean;
-    proActivatedAt: string;
-    proExpiresAt: string | null;
-  };
-}
-
-export interface PaymentHistoryItem {
-  amount: number;
-  currency: string;
-  date: string;
-  status: 'pending' | 'succeeded' | 'failed' | 'canceled';
-  stripePaymentIntentId: string;
-  description: string;
-}
-
-export interface PaymentHistoryResponse {
-  paymentHistory: PaymentHistoryItem[];
-  totalPayments: number;
-  totalAmount: number;
-}
-
-export interface CancellationResponse {
-  message: string;
-  user: {
-    id: string;
-    isPro: boolean;
-    isProActive: boolean;
-    proActivatedAt: string;
-    proExpiresAt: string | null;
-  };
-}
-
-// Create a payment intent for Pro subscription
-export const createPaymentIntent = async (): Promise<PaymentIntentResponse> => {
+// Razorpay API functions
+const getOrderId = async (): Promise<{ order_id: string; amount: number; currency: string; key: string }> => {
   try {
-    const response = await api.post('/stripe/create-payment-intent');
-
-    if (!response.data.success) {
-      throw new Error(response.data.errors?.[0]?.msg || 'Failed to create payment intent');
-    }
-
+    const response = await api.get('/razorpay/order');
     return response.data.data;
   } catch (error) {
-    console.error('Error creating payment intent:', error);
+    console.error('Error fetching Razorpay order ID:', error);
     throw error;
   }
 };
 
-// Confirm payment and activate Pro subscription
-export const confirmPayment = async (
-  paymentIntentId: string
-): Promise<PaymentConfirmationResponse> => {
+const verifyPayment = async (paymentData: {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}) => {
   try {
-    const response = await api.post('/stripe/confirm-payment', { paymentIntentId });
-
-    if (!response.data.success) {
-      throw new Error(response.data.errors?.[0]?.msg || 'Failed to confirm payment');
-    }
-
-    return response.data.data;
+    const response = await api.post('/razorpay/verify-signature', paymentData);
+    return response.data;
   } catch (error) {
-    console.error('Error confirming payment:', error);
+    console.error('Error verifying payment:', error);
     throw error;
   }
 };
 
-// Get user's payment history
-export const getPaymentHistory = async (): Promise<PaymentHistoryResponse> => {
+// Get payment history
+export const getPaymentHistory = async (limit = 10) => {
   try {
-    const response = await api.get('/stripe/payment-history');
-
-    if (!response.data.success) {
-      throw new Error(response.data.errors?.[0]?.msg || 'Failed to fetch payment history');
-    }
-
-    return response.data.data;
+    const response = await api.get(`/razorpay/payments?limit=${limit}`);
+    return response.data;
   } catch (error) {
     console.error('Error fetching payment history:', error);
     throw error;
   }
 };
 
-// Cancel Pro subscription
-export const cancelProSubscription = async (): Promise<CancellationResponse> => {
+// Restore subscription
+export const restoreSubscription = async () => {
   try {
-    const response = await api.post('/stripe/cancel-subscription');
-
-    if (!response.data.success) {
-      throw new Error(response.data.errors?.[0]?.msg || 'Failed to cancel subscription');
-    }
-
-    return response.data.data;
+    const response = await api.post('/razorpay/restore');
+    return response.data;
   } catch (error) {
-    console.error('Error cancelling subscription:', error);
+    console.error('Error restoring subscription:', error);
     throw error;
   }
 };
 
 // Payment processing hook
 export const usePaymentProcessing = () => {
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [user, setUser] = useAtom(userAtom);
-  const [isPro, setIsPro] = useAtom(proStatusAtom);
+  const [, setIsPro] = useAtom(proStatusAtom);
 
-  const processPayment = async (): Promise<{ success: boolean; error?: string }> => {
+  const processPayment = async (): Promise<{ success: boolean; error?: string; message?: string }> => {
     try {
-      // Step 1: Create payment intent
-      const paymentIntent = await createPaymentIntent();
+      // Step 1: Get Razorpay order details from backend
+      const orderData = await getOrderId();
 
-      // Step 2: Initialize payment sheet
-      const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: 'PhysioPrep',
-        paymentIntentClientSecret: paymentIntent.clientSecret,
-        defaultBillingDetails: {
-          name: 'PhysioPrep User',
+      // Step 2: Open Razorpay checkout
+      const options = {
+        description: 'Lifetime Access to PhysioPrep Pro',
+        image: 'assets/logo.png', // Logo image path
+        currency: orderData.currency,
+        key: orderData.key,
+        amount: orderData.amount.toString(),
+        name: 'PhysioPrep Pro',
+        order_id: orderData.order_id,
+        prefill: {
+          email: user?.email || '',
+          name: user?.name || '',
         },
-        allowsDelayedPaymentMethods: false,
-        returnURL: 'physioprep://payment-return',
-      });
+        theme: { color: '#F59E0B' }, // Amber color to match Pro theme
+      };
 
-      if (initError) {
-        console.error('Error initializing payment sheet:', initError);
-        return { success: false, error: initError.message };
+      // Step 3: Open Razorpay payment interface
+      const paymentResult = await RazorpayCheckout.open(options);
+
+      if (paymentResult.razorpay_order_id && paymentResult.razorpay_payment_id && paymentResult.razorpay_signature) {
+        // Step 4: Verify payment with backend
+        const verificationResult = await verifyPayment({
+          razorpay_order_id: paymentResult.razorpay_order_id,
+          razorpay_payment_id: paymentResult.razorpay_payment_id,
+          razorpay_signature: paymentResult.razorpay_signature,
+        });
+
+        if (verificationResult.success) {
+          // Step 5: Update local state with server-confirmed data
+          const userData = verificationResult.data.user;
+
+          setIsPro({
+            isPro: userData.isPro,
+            isProActive: userData.isProActive,
+            hasProAccess: userData.hasProAccess,
+            proActivatedAt: new Date(userData.proActivatedAt),
+            proExpiresAt: null, // Lifetime access
+          });
+
+          if (user) {
+            setUser((prevUser) =>
+              prevUser
+                ? {
+                    ...prevUser,
+                    isPro: userData.isPro,
+                    isProActive: userData.isProActive,
+                    hasProAccess: userData.hasProAccess,
+                    proActivatedAt: userData.proActivatedAt,
+                    proExpiresAt: null,
+                  }
+                : prevUser
+            );
+          }
+
+          return {
+            success: true,
+            message: 'Payment successful! Pro subscription activated.',
+          };
+        } else {
+          return {
+            success: false,
+            error: 'Payment verification failed. Please contact support.'
+          };
+        }
+      } else {
+        return {
+          success: false,
+          error: 'Payment was not completed successfully.'
+        };
       }
 
-      // Step 3: Present payment sheet
-      const { error: presentError } = await presentPaymentSheet();
-
-      if (presentError) {
-        console.error('Error presenting payment sheet:', presentError);
-        return { success: false, error: presentError.message };
-      }
-
-      // Step 4: Confirm payment on backend
-      const confirmation = await confirmPayment(paymentIntent.paymentIntentId);
-      console.log('Payment confirmed:', confirmation);
-
-      setUser((prevUser) =>
-        prevUser
-          ? {
-              ...prevUser,
-              isPro: confirmation.user.isPro,
-              proActivatedAt: confirmation.user.proActivatedAt,
-              proExpiresAt: confirmation.user.proExpiresAt,
-            }
-          : prevUser
-      );
-
-      setIsPro((prevProStatus) => (
-        prevProStatus
-          ? {
-              ...prevProStatus,
-              isPro: confirmation.user.isPro,
-              isProActive: confirmation.user.isPro,
-              proExpiresAt: confirmation.user.proExpiresAt ? new Date(confirmation.user.proExpiresAt) : null,
-              proActivatedAt: confirmation.user.proActivatedAt ? new Date(confirmation.user.proActivatedAt) : null,
-              hasProAccess: confirmation.user.isPro,
-            }
-          : prevProStatus
-
-       
-      ));
-
-      return { success: true };
     } catch (error) {
       console.error('Payment processing error:', error);
+
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('User cancelled')) {
+          return { success: false, error: 'Payment was cancelled.' };
+        }
+        if (error.message.includes('Network')) {
+          return { success: false, error: 'Network error. Please check your connection and try again.' };
+        }
+      }
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Payment failed',
+        error: 'Payment failed. Please try again or contact support.',
       };
     }
   };
 
   return { processPayment };
+};
+
+// Subscription restoration hook
+export const useSubscriptionRestore = () => {
+  const [user, setUser] = useAtom(userAtom);
+  const [, setIsPro] = useAtom(proStatusAtom);
+
+  const restorePurchase = async (): Promise<{ success: boolean; error?: string; message?: string }> => {
+    try {
+      const result = await restoreSubscription();
+
+      if (result.success) {
+        // Update local state with restored subscription data
+        const userData = result.data.user;
+
+        setIsPro({
+          isPro: userData.isPro,
+          isProActive: userData.isProActive,
+          hasProAccess: userData.hasProAccess,
+          proActivatedAt: new Date(userData.proActivatedAt),
+          proExpiresAt: null, // Lifetime access
+        });
+
+        if (user) {
+          setUser((prevUser) =>
+            prevUser
+              ? {
+                  ...prevUser,
+                  isPro: userData.isPro,
+                  isProActive: userData.isProActive,
+                  hasProAccess: userData.hasProAccess,
+                  proActivatedAt: userData.proActivatedAt,
+                  proExpiresAt: null,
+                }
+              : prevUser
+          );
+        }
+
+        return {
+          success: true,
+          message: result.data.message,
+        };
+      } else {
+        return {
+          success: false,
+          error: 'No previous purchases found to restore.',
+        };
+      }
+    } catch (error) {
+      console.error('Subscription restore error:', error);
+      return {
+        success: false,
+        error: 'Failed to restore subscription. Please try again.',
+      };
+    }
+  };
+
+  return { restorePurchase };
 };

@@ -4,6 +4,7 @@ import { homeStatsAtom, UserHomeStats } from 'store/home';
 import { fetchUserStats, clearLevelUpFlag } from '../actions/user';
 import { SheetManager } from 'react-native-actions-sheet';
 import { proStatusAtom } from 'store/pro';
+import { userAtom } from 'store/auth';
 
 export interface UseXPLevelReturn {
   stats: UserHomeStats | null;
@@ -18,6 +19,7 @@ export interface UseXPLevelReturn {
  */
 export function useXPLevel(): UseXPLevelReturn {
   const [stats, setStats] = useAtom(homeStatsAtom);
+  const [,setUser] = useAtom(userAtom);
   const [, setProStatus] = useAtom(proStatusAtom);
 
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,20 @@ export function useXPLevel(): UseXPLevelReturn {
       }
 
       setStats(newStats);
+  setUser((prevUser) => {
+    if (!prevUser) return prevUser;
+    return {
+      ...prevUser,
+      xp: newStats.xp,
+      level: newStats.level,
+      isPro: newStats.isPro,
+      isProActive: newStats.isPro,
+      proExpiresAt: null,
+      proActivatedAt: null,
+      hasProAccess: newStats.isPro,
+      // id: prevUser.id, // ensure id is always present and not undefined
+    };
+  });
       setProStatus({
         isPro: newStats.isPro,
         isProActive: newStats.isPro,
