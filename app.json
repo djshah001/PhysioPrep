@@ -4,7 +4,7 @@
     "slug": "physioprep",
     "version": "1.0.0",
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/logo.png",
       "bundler": "metro"
     },
     "experiments": {
@@ -38,10 +38,10 @@
     ],
     "orientation": "portrait",
     "scheme": "physioprep",
-    "icon": "./assets/icon-main.png",
+    "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/icon2.png",
+      "image": "./assets/logo.png",
       "resizeMode": "cover",
       "backgroundColor": "#000000"
     },
@@ -52,7 +52,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon-main.png",
+        "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.darshanx01.physioprep"
